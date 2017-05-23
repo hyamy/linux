@@ -1,0 +1,551 @@
+1	编辑文本文件内容－－－－－gedit, nano, vi, vim 
+
+# vim FILE
+
+模式：
+	命令模式
+	输入模式
+	末行模式
+
+
+命令模式---->输入模式： 	 a i o O
+输入模式---->命令模式：     ESC
+命令模式---->末行模式：	  冒号
+
+
+
+命令模式：
+
+1)　移动光标 
+
+	h左 j下 k上 l右
+
+	$	跳转到行尾 
+	^	跳转到行首
+
+
+	shift+g		跳转到文件最后一行 
+	gg				跳转到文件首行
+	13gg			跳转到第13行  
+
+
+2）	删除字符
+
+	x	删除单个字符
+	dw	删除单词
+	d$	删除到行尾
+	d^	删除到行首
+	dd	删除整行
+		13dd		向下删除13行
+
+
+
+3)　替换操作 
+
+	r	替换单个字符
+	R	连续替换多个字符，按ESC停止替换
+
+
+4）	撤销
+
+	u
+
+
+5)	复制粘贴 	
+
+	3yy					yw		y$
+		3p		粘贴到当前行的下一行
+		3P		粘贴到当前行的上一行	
+	
+
+6）	剪切粘贴
+
+	3dd
+		3p	
+
+7)	查找
+
+	/string
+		n	向下查找
+		N	向上查找
+
+
+8)	保存退出
+
+	ZZ
+
+
+
+末行模式：
+
+1)　显示行号 
+ 
+	:set nu	
+
+2)	保存退出
+
+	:wq
+
+3) 强制退出 
+	
+	:q!
+
+4) 另存为 
+
+	:w /path/to/file
+
+5)	读取文件内容 
+
+	:r /path/to/file
+
+
+6)	查找替换
+
+	[查找范围]	s/old/new[修饰符]
+
+                               
+	:s/oracle/mysql			>>替换光标所在行的第一次出现的ｏｒａｃｌｅ
+
+	:s/oracle/mysql/g			>>替换光标所在行的所有ｏｒａｃｌｅ
+
+
+	查找范围：
+	
+		%			全文范围
+
+		:% s/oracle/mysql/g
+	
+	
+		n,m 		指定行的内容 
+
+		:5,12 s/oracle/mysql/g
+
+		
+		$	表示最后一行 
+
+
+		:5,$ s/oracle/mysql/g 
+
+		:5,$-1 s/oracle/mysql/g
+
+
+7)	取消查找的高亮背景 
+
+	:nohl 
+
+
+8)	设置ｔａｂ键宽度
+
+	:set tabstop=4
+
+
+
+2	过滤文本文件内容
+
+# grep [option] "PATTERN" FILE 
+
+
+PATTERN模式：
+	由普通字符和正则表达式的元字符组成的条件 	
+
+
+[root@localhost ~]# grep --color "root" /etc/passwd
+root:x:0:0:root:/root:/bin/bash
+operator:x:11:0:operator:/root:/sbin/nologin
+
+
+正则表达式(Regex)的元字符 
+
+1)	匹配单个字符的元字符 
+
+	.		任意单个字符		
+		[root@localhost ~]# grep --color "r..t" /etc/passwd
+
+	
+	[abc]		匹配方括号中的任意单个字符 				
+		[root@localhost ~]# grep "h[abc]k" /tmp/1.txt 
+
+		
+	-		连续多个字符集 
+	
+	[a-z]	[A-Z]	[a-zA-Z]	[0-9]	[a-zA-Z0-9]
+
+		[root@localhost ~]# grep "h[a-z]k" /tmp/1.txt
+		[root@localhost ~]# grep "h[A-Z]k" /tmp/1.txt
+		[root@localhost ~]# grep "h[a-zA-Z]k" /tmp/1.txt
+		[root@localhost ~]# grep "h[0-9]k" /tmp/1.txt
+		[root@localhost ~]# grep "h[a-zA-Z0-9]k" /tmp/1.txt
+
+	
+	^		取反 
+		[root@localhost ~]# grep "h[^a-zA-Z]k" /tmp/1.txt
+
+	
+
+	特殊字符集：
+
+		[[:alpha:]]		任意单个字母
+		[[:digit:]]		任意单个数字
+		[[:alnum:]]		任意单个字母或者数字
+		[[:upper:]]		任意单个大写字母 
+		[[:lower:]]		任意单个小写字母 
+		[[:space:]]		任意单个空白字符 			
+
+
+2）	匹配字符出现位置的元字符 
+
+	^string			以string开头 
+		[root@localhost ~]# grep "^root" /etc/passwd
+		[root@localhost ~]# grep "^[rf]" /etc/passwd
+
+			
+	string$			以string结尾 
+		[root@localhost ~]# grep "bash$" /etc/passwd
+		[root@localhost ~]# grep "nologin$" /etc/passwd | wc -l
+		31
+	
+
+	^$	空行 
+
+		[root@localhost ~]# grep "^$" /etc/fstab  | wc -l
+
+
+3）	匹配字符出现的次数 
+
+	*	匹配前一个字符出现任意次 		ab*
+
+		[root@localhost ~]# grep "ab*" /tmp/2.txt
+
+
+	\?	0次或者1次		可有可无 
+
+		[root@localhost ~]# grep "ab\?" /tmp/2.txt
+
+
+
+	\+	1次或者多次		至少1次 
+
+		[root@localhost ~]# grep "ab\+" /tmp/2.txt
+
+
+	\{2\}		精确出现2次 
+
+		[root@localhost ~]# grep "ab\{2\}" /tmp/2.txt
+
+	\{2,5\}		至少2次，最多5次 
+
+		[root@localhost ~]# grep "ab\{2,5\}" /tmp/2.txt
+
+	\{2,\}		至少2次 	
+
+		[root@localhost ~]# grep "ab\{2,\}" /tmp/2.txt
+
+
+
+分组 \(ab\)
+
+[root@localhost ~]# grep "\(ab\)\{2,\}" /usr/share/dict/words 
+
+
+
+
+option选项：
+
+-i		忽略大小写 
+
+[root@localhost ~]# grep -i "^h" /tmp/1.txt 
+
+
+-o		only仅显示符合正则表达式的内容 
+
+[root@localhost ~]# grep -o "r..t" /etc/passwd
+
+
+-v		反向过滤 
+
+[root@localhost ~]# grep -v "^#" /etc/fstab 
+
+
+-e PATTERN 	根据多个条件过滤文本 
+
+[root@localhost ~]# grep -v -e "^#" -e "^$" /etc/fstab
+
+
+-E	支持扩展正则表达式   ()  {}  ｜ 或者 
+
+[root@localhost ~]# grep -E "(ab){2,}"  /usr/share/dict/words 
+
+
+[root@localhost ~]# grep -E "ab|mn" /usr/share/dict/words
+
+
+－A n		同时显示符合条件的后n行内容 
+
+获取网卡的IPV4和IPV6地址信息 
+
+[root@localhost ~]# ifconfig eth0 | grep -A 1 "Bcast"
+          inet addr:172.16.50.245  Bcast:172.16.50.255  Mask:255.255.255.0
+          inet6 addr: fe80::20c:29ff:fee8:ceba/64 Scope:Link
+
+
+-B n		同时显示符合条件的前n行内容 
+
+[root@localhost ~]# ifconfig eth0 | grep -B 1 "Bcast"
+eth0      Link encap:Ethernet  HWaddr 00:0C:29:E8:CE:BA  
+          inet addr:172.16.50.245  Bcast:172.16.50.255  Mask:255.255.255.0
+
+
+
+
+
+3	查找文件目录
+
+# find PATH EXPRESSION 
+
+
+EXPRESSION表达式：
+
+1）根据文件名称查找 
+	
+	-name "通配符表达式"
+
+[root@localhost ~]# find /etc/ -name "*.conf"
+
+
+2）根据文件大小查找 
+
+	-size {+|-}n
+
+[root@localhost ~]# find /etc/ -size 3M
+
+[root@localhost ~]# find /etc/ -size +3M
+
+[root@localhost ~]# find /etc/ -size -3M
+
+
+3)	根据文件的修改时间
+
+	-mtime {+-}n
+
+[root@localhost ~]# find /etc/ -mtime -2			>>>2天内
+
+[root@localhost ~]# find /etc/ -mtime +2			>>>2天前
+
+
+4） 根据文件的所有者查找 
+
+	-user USER			属主
+	-group GROUP		属组 
+
+[root@localhost ~]# useradd tom
+[root@localhost ~]# groupadd caiwu
+[root@localhost ~]# 
+[root@localhost ~]# mkdir /test
+[root@localhost ~]# touch /test/{1..10}.txt
+[root@localhost ~]# 
+[root@localhost ~]# chown tom.caiwu /test/{1,3,5,7}.txt
+
+[root@localhost ~]# find /test/ -user tom
+[root@localhost ~]# find /test/ -group caiwu
+
+
+5） 根据文件的类型查找 
+
+	-type TYPE
+		-, d, b, c, l 
+
+[root@localhost ~]# find /dev/ -type b
+
+
+# find PATH EXPRESSION -exec COMMAND \;
+
+[root@localhost ~]# find /test/ -user tom -exec cp {} /tmp/ \;
+
+
+
+
+4	文件目录压缩
+
+文件压缩/解压缩 --------- gzip, bzip2, xz 
+
+gzip 		*.gz 
+
+压缩
+
+[root@localhost ~]# gzip /test/1.txt 
+[root@localhost ~]# file /test/1.txt.gz 
+/test/1.txt.gz: gzip compressed data, was "1.txt", from Unix, last modified: Sun Oct 16 14:23:39 2016
+
+解压缩
+
+[root@localhost ~]# gzip -d /test/1.txt.gz 
+
+[root@localhost ~]# gunzip /test/1.txt.gz 
+
+
+bzip2 	*.bz2 
+
+压缩
+
+[root@localhost ~]# bzip2 /test/2.txt 
+[root@localhost ~]# file /test/2.txt.bz2 
+/test/2.txt.bz2: bzip2 compressed data, block size = 900k
+
+
+解压缩
+
+[root@localhost ~]# bzip2 -d /test/2.txt.bz2 
+
+[root@localhost ~]# bunzip2 /test/2.txt.bz2 
+
+
+xz			*.xz 
+
+压缩
+
+[root@localhost ~]# xz /test/3.txt 
+[root@localhost ~]# file /test/3.txt.xz 
+/test/3.txt.xz: xz compressed data
+
+
+解压缩 
+
+[root@localhost ~]# xz -d /test/3.txt.xz 
+
+
+
+
+tar---------创建打包/归档文件 
+
+创建归档文件-------	*.tar 
+
+# tar cf ARCHIVE.tar SRC_FILE 
+
+	c	创建
+	f	用于指定归档文件名称 
+	
+示例：
+
+将/etc目录下所有文件打包存放到/backup目录，名称为etc.tar 
+
+[root@localhost ~]# mkdir /backup
+[root@localhost ~]# tar cf /backup/etc.tar /etc/
+[root@localhost ~]# file /backup/etc.tar 
+/backup/etc.tar: POSIX tar archive (GNU)
+
+
+查看归档文件中的内容 
+
+# tar tvf ARCHIVE.tar  
+	
+	t	查看 
+
+[root@localhost ~]# tar tvf /backup/etc.tar 
+
+
+解包文件
+
+# tar xf ARCHIVE.tar [-C DIRECTORY]
+	
+	x	拆解
+	f	指定归档文件名称
+	-C DIRECTORY	指定解包的目录 
+
+[root@localhost ~]# tar xf /backup/etc.tar 					>>>解到当前目录
+
+[root@localhost ~]# tar xf /backup/etc.tar -C /tmp/		>>>解到指定的目录
+
+
+
+
+调用gzip 		＊.tar.gz 
+
+创建归档并压缩
+
+# tar czf ARCHIVE.tar.gz SRC_FILE 
+
+	z	调用gzip
+
+[root@localhost ~]# tar czf /backup/etc.tar.gz /etc/
+
+
+解压缩：
+
+# tar xzf ARCHIVE.tar.gz [-C DIRECTORY]
+
+[root@localhost ~]# tar zxf /backup/etc.tar.gz -C /home/
+
+
+
+
+
+
+调用bzip2 		*.tar.bz2 
+
+创建归档并压缩 
+
+# tar cjf ARCHIVE.tar.bz2 SRC_FILE 
+
+	j	调用bzip2 
+
+
+[root@localhost ~]# tar cjf /backup/etc.tar.bz2 /etc/
+
+
+解压缩：
+
+# tar xjf ARCHIVE.tar.bz2 [-C DIRECTORY]
+
+[root@localhost ~]# tar xjf /backup/etc.tar.bz2 -C /tmp/
+
+
+
+
+
+调用xz		*.tar.xz 
+
+创建归档并压缩
+
+# tar cJf ARCHIVE.tar.xz SRC_FILE 
+
+	J	调用xz 
+
+[root@localhost ~]# tar cJf /backup/etc.tar.xz /etc/
+
+
+解压缩：
+
+# tar xJf ARCHIVE.tar.xz [-C DIRECTORY]
+
+
+
+
+解压缩.zip文件 
+
+# unzip FILE 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

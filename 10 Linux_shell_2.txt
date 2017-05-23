@@ -1,0 +1,545 @@
+Linux　shell分支结构　
+
+	if
+	case
+
+if分支结构　
+
+用法1：
+
+if CONDITION; then
+	statement
+	statement
+	...
+fi
+
+CONDITION的写法：
+
+	COMMAND
+	[ expression ]
+
+expression表达式：
+	数学表达式
+	字符表达式
+	文件目录表达式　
+
+
+数学表达式：
+		
+	[ number1 -eq number2 ]
+	[ number1 -ne number2 ]
+	[ number1 -gt number2 ]
+	[ number1 -ge number2 ]
+	[ number1 -lt number2 ]
+	[ number1 -le number2 ]
+
+
+
+用法2: 单分支结构
+
+if CONDITION; then
+	statement
+	statement
+	...
+else
+	statement
+	statement
+fi
+
+
+编写脚本，判断用户不存在则创建之，否则提示用户存在
+
+#!/bin/bash
+#
+
+read -p "请输入用户名：　" name 
+
+if ! id $name &> /dev/null; then
+   useradd $name
+   read -p "请输入用户密码：" password
+   echo "$password" | passwd --stdin $name &> /dev/null
+   echo "用户$name创建完成，密码为$password"
+else
+   echo "用户$name存在"
+fi
+
+
+编写脚本，判断用户的uid和gid,　相同则显示good user,否则显示bad user
+
+
+#!/bin/bash
+#
+
+read -p "Enter user: " name
+
+user_id=`id -u $name`
+group_id=`id -g $name`
+
+if [ $user_id -eq $group_id ]; then
+   echo "Good user."
+else
+   echo "Bad user."
+fi
+
+
+编写脚本，由用户输入用户名，判断用户是否存在，如果不存在，就显示用户不存在，如果存在，以下面格式输出用户相关信息：
+
+用户名:
+宿主目录:
+SHELL程序:
+
+
+#!/bin/bash
+#
+
+read -p "Enter user: " name
+
+if id $name &> /dev/null; then
+   echo "用户名：$name"
+   homedir=`grep "^$name:" /etc/passwd | awk -F: '{print $6}'`
+   shname=`grep "^$name:" /etc/passwd | awk -F: '{print $7}'`
+   echo "宿主目录：$homedir"
+   echo "SHELL名称：$shname"
+else
+   echo "用户$name不存在"
+fi
+
+
+编写脚本，判断文件中是否存在空行，有则显示空行个数，没有则显示文件内容，并在每一行前显示行号
+
+
+#!/bin/bash
+#
+
+read -p "请输入文件名称(Full Path): " file
+
+if grep "^$" $file &> /dev/null; then
+   number=`grep "^$" $file | wc -l`
+   echo "文件$file中空行的数量：$number"
+else
+   echo "文件$file内容如下："
+   cat -n $file
+fi
+
+
+编写脚本，实现创建用户功能，不存在则创建用户，并要求用户第一次登录时需要修改密码，存在则显示用户存在
+
+	
+	# passwd -e tom
+
+
+
+
+用法3: 多分支if结构　
+
+if CONDITION; then
+	statement
+	statement
+elif CONDITION; then
+	statement
+	statement
+elif CONDITIOIN; then
+	statement
+	statement
+else
+	statement
+	statement
+fi
+
+
+多个条件的写法：
+	AND			[ condition1 -a condition2 ]					[ condition1 ] && [ condition2 ]
+	OR			[ condition1 -o condition2 ]					[ condition1 ] || [ condition2 ]
+
+
+
+编写脚本， 判断当前系统时间的小时数字 
+
+	9--11			morning
+	12--14			noon
+	15---18		afternoon
+					night
+
+
+#!/bin/bash
+#
+
+hour=`date +%H`
+
+if [ $hour -ge 9 -a $hour -le 11 ]; then
+   echo "Morning"
+elif [ $hour -ge 12 -a $hour -le 14 ]; then
+   echo "Noon"
+elif [ $hour -ge 15 -a $hour -le 18 ]; then
+   echo "Afternoon"
+else
+   echo "Night"
+fi
+
+
+
+[ expression ]
+
+数学表达式
+
+字符表达式
+	[ str1 == str2 ]
+	[ str1 != str2 ]
+	[ -z str1 ]				判断字符串是否为空的		
+
+#!/bin/bash
+#
+
+read -p "请输入密码：" pwd1
+read -p "请再次输入密码：" pwd2
+
+if [ "$pwd1" == "$pwd2" ]; then
+  echo "密码设置成功"
+else
+  echo "密码不一致，请重试"
+fi
+
+
+文件目录表达式
+
+	[ -e file ]		 判断文件目录是否存在
+	[ -f file ]		 判断是否为文件	
+	[ -d file ]		 判断是否为目录	
+
+
+双目表达式
+单目表达式：　		[ -e file ]		[ ! -e file ]
+
+
+
+用法4: 嵌套if 
+
+if CONDITION; then
+	if CONDITION; then
+		statement
+		statement
+	else
+		statement
+		statement
+	fi
+else
+	statement
+	statement
+fi
+
+
+
+
+
+#!/bin/bash
+#
+
+read -p "Enter user: " name
+ 
+if id $name &> /dev/null; then
+   #获取UID，GID并进行判断
+   user_id=`id -u $name`
+   group_id=`id -g $name`
+   if [ $user_id -eq $group_id ]; then
+	echo "Good user"
+   else
+	echo "Bad user"
+   fi
+else
+   echo "用户$name不存在"
+fi
+
+
+编写脚本，由用户输入文件名，　再由用户输入目录名称，将该文件备份到对应的目录　
+
+
+#!/bin/bash
+#
+
+read -p "输入备份文件(Full path): " file
+
+if [ -f $file ]; then
+   #备份文件
+   read -p "输入备份目录: " dir
+   if [ -d $dir ]; then
+	cp $file $dir
+	echo "文件$file已被复制到$dir目录"
+   else
+	mkdir -p $dir
+	cp $file $dir
+	echo "文件$file已被复制到$dir目录"
+   fi	
+else
+   echo "文件$file不存在"
+fi
+
+
+
+
+
+case分支判断结构　
+
+语法：
+
+case 变量名称　in
+	value1)
+		statement
+		statement
+		;;
+	value2)
+		statement
+		statement
+		;;
+	value3)
+		statement
+		statement
+		;;
+	*)
+		statement
+		statement
+		;;
+esac
+
+
+编写脚本，　判断用户输入的字符串
+
+#!/bin/bash
+#
+
+read -p "Enter string: " str 
+
+case $str in
+   linux|Linux)
+     echo "windows."
+     ;;
+   windows|Windows)
+     echo "linux."
+     ;;
+   *)
+     echo "other."
+     ;;
+esac
+
+
+特殊变量：
+	
+	位置变量
+		$1, $2 ,$3 ,$4 ...... $9, ${10}, 
+
+			$1: 命令的第１个参数　
+
+		$0	命令本身　
+
+		$#	命令参数的个数
+
+
+使用位置变量：
+
+#!/bin/bash
+#
+
+case $1 in
+  linux)
+    echo "windows."
+    ;;
+  windows)
+    echo "linux"
+    ;;
+  *)
+    echo "other"
+    ;;
+esac
+
+
+
+#!/bin/bash
+#
+
+if [ -z $1 ]; then
+  echo "用法：./11.sh {linux|windows|other}"
+  exit 9
+fi
+
+case $1 in
+  linux)
+    echo "windows."
+    ;;
+  windows)
+    echo "linux"
+    ;;
+  *)
+    echo "other"
+    ;;
+esac
+
+
+使用$#判断参数是否正确　
+
+#!/bin/bash
+#
+
+if [ $# -ne 1 ]; then
+  echo "用法：./11.sh {linux|windows|other}"
+  exit 9
+fi
+
+case $1 in
+  linux)
+    echo "windows."
+    ;;
+  windows)
+    echo "linux"
+    ;;
+  *)
+    echo "other"
+    ;;
+esac
+
+
+
+[root@shell ~]# basename /etc/sysconfig/network-scripts/ifcfg-eth0 				>>>获取文件名称
+ifcfg-eth0
+
+[root@shell ~]# dirname /etc/sysconfig/network-scripts/ifcfg-eth0 				>>>获取文件所在的目录名称　
+/etc/sysconfig/network-scripts
+[root@shell ~]# 
+
+
+#!/bin/bash
+#
+
+if [ $# -ne 1 ]; then
+  echo "用法：`basename $0` {linux|windows|other}"
+  exit 9
+fi
+
+case $1 in
+  linux)
+    echo "windows."
+    ;;
+  windows)
+    echo "linux"
+    ;;
+  *)
+    echo "other"
+    ;;
+esac
+
+
+
+编写Nginx(网站)服务控制脚本　
+
+安装Nginx
+
+[root@shell nginx-1.11.4]# yum install -y gcc* pcre-devel
+
+
+[root@shell ~]# tar zxf nginx-1.11.4.tar.gz 
+[root@shell ~]# cd nginx-1.11.4
+[root@shell nginx-1.11.4]# ./configure --prefix=/usr/local/nginx
+[root@shell nginx-1.11.4]# make
+[root@shell nginx-1.11.4]# make install
+
+
+启动nginx服务
+
+[root@shell ~]# /usr/local/nginx/sbin/nginx 
+
+关闭nginx服务　
+
+[root@shell ~]# /usr/local/nginx/sbin/nginx -s stop
+
+刷新nginx服务　
+
+[root@shell conf]# /usr/local/nginx/sbin/nginx -s reload
+
+
+检测配置文件语法：
+
+[root@shell conf]# /usr/local/nginx/sbin/nginx -t
+
+
+编写nginx服务控制脚本(start|stop|reload|status|configtest)
+
+[root@shell ~]# cat /etc/init.d/nginx 
+#!/bin/bash
+#
+# chkconfig: 2345 96 14
+
+prog=/usr/local/nginx/sbin/nginx
+pidfile=/usr/local/nginx/logs/nginx.pid
+
+#判断第一个参数是否存在
+
+if [ -z $1 ]; then
+  echo "用法：`basename $0` {start|stop|reload|status|configtest}"
+  exit 9
+fi
+
+#根据第一个参数不同执行不同的操作
+
+case $1 in
+  start)
+    # 启动nginx服务
+    $prog
+    if [ $? -eq 0 ]; then
+	echo "start nginx ..........[ok]"
+    fi
+    ;;
+   stop)
+    # 关闭nginx服务
+    $prog -s stop
+    if [ $? -eq 0 ]; then
+	echo "stop nginx ............ [ok]"
+    fi
+    ;;
+  reload)
+    # 刷新nginx服务
+    $prog -s reload
+    if [ $? -eq 0 ]; then
+	echo "Reloading nginx ........ [ok]"
+    fi
+    ;;
+  status)
+    # 显示nginx服务状态
+    if [ -f $pidfile ]; then
+      echo "nginx (pid `cat $pidfile`) is running....."
+    else
+      echo "nginx is stopped"
+    fi
+    ;;
+
+  configtest)
+    # 检测配置文件语法
+    $prog -t
+    ;;
+  *)
+    echo "用法：`basename $0` {start|stop|reload|status|configtest}"
+    exit 10
+    ;;
+esac
+
+[root@shell ~]# chmod a+x /etc/init.d/nginx
+[root@shell ~]# chkconfig --add nginx             >>>将nginx添加为系统服务
+[root@shell ~]# chkconfig nginx on
+[root@shell ~]# chkconfig --list nginx
+nginx          	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

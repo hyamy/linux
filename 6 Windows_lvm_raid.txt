@@ -1,0 +1,485 @@
+Linux磁盘管理
+
+	LVM管理
+	RAID阵列 
+
+
+LVM--------Logical Volume Management 逻辑卷管理 
+
+优势：
+	1	在不影响数据的情况下，可扩展磁盘空间 
+	2	支持快照的功能
+
+LVM工作过程：
+
+	硬盘/分区----PV(物理卷)---->VG(卷组)---->LV(逻辑卷)--->创建文件系统/挂载使用
+
+	注意：
+		1	分区system ID修改为8e
+		2	分区不需要创建文件系统
+
+
+PV相关的操作
+
+1	创建PV
+
+# pvcreate <DISK|PARTITION>				
+
+
+2	删除PV
+
+# pvremove <PV_NAME>			
+
+3	查看系统中所有的PV
+
+# pvscan
+
+4	显示PV的详细信息
+
+# pvdisplay [PV_NAME] 
+
+
+VG卷组的相关操作：
+
+1	创建卷组
+
+# vgcreate <VG_NAME>	<PV_NAME> .... 				
+
+
+2	删除卷组 
+
+# vgremove <VG_NAME>
+
+
+3	查看系统中所有卷组
+
+# vgscan 
+
+4	查看某个VG的详细信息 
+
+# vgdisplay [VG_NAME] 
+
+
+
+LV逻辑卷的操作 
+
+1	创建逻辑卷 
+
+# lvcreate -L <SIZE> -n <LV_NAME> <VG_NAME>			# lvcreate -L 10G -n webdata data 
+
+	设备文件：	/dev/data/webdata 		/dev/卷组名称/逻辑卷名称 
+
+2	删除逻辑卷 
+
+# lvremove <LV_DEVICE_NAME>
+
+3	查看系统中所有LV
+
+# lvscan 
+
+4  显示LV的详细信息
+
+# lvdisplay [LV_DEVICE_NAME]
+
+	
+
+
+示例1：
+
+创建逻辑卷/dev/data/oracle,指定其大小为4G,并自动挂载到/uplooking_oracle目录 
+
+1） 创建两个分区，并修改分区system ID为8e
+
+[root@disk ~]# fdisk -l /dev/vdc
+
+Disk /dev/vdc: 8589 MB, 8589934592 bytes
+16 heads, 63 sectors/track, 16644 cylinders
+Units = cylinders of 1008 * 512 = 516096 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk identifier: 0xb372f9f6
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/vdc1               1        8323     4194760+  8e  Linux LVM
+/dev/vdc2            8324       16644     4193784   8e  Linux LVM
+[root@disk ~]# 
+
+2) 创建物理卷
+
+[root@disk ~]# pvcreate /dev/vdc1 /dev/vdc2 
+  Physical volume "/dev/vdc1" successfully created
+  Physical volume "/dev/vdc2" successfully created
+[root@disk ~]# 
+[root@disk ~]# pvscan 
+  PV /dev/vdc1         lvm2 [4.00 GiB]
+  PV /dev/vdc2         lvm2 [4.00 GiB]
+  Total: 2 [8.00 GiB] / in use: 0 [0   ] / in no VG: 2 [8.00 GiB]
+[root@disk ~]# 
+
+
+3） 创建卷组data 
+
+[root@disk ~]# vgcreate data /dev/vdc1 /dev/vdc2 
+  Volume group "data" successfully created
+
+[root@disk ~]# vgdisplay data
+  --- Volume group ---
+  VG Name               data
+  System ID             
+  Format                lvm2
+  Metadata Areas        2
+  Metadata Sequence No  1
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                0
+  Open LV               0
+  Max PV                0
+  Cur PV                2
+  Act PV                2
+  VG Size               7.99 GiB
+  PE Size               4.00 MiB
+  Total PE              2046
+  Alloc PE / Size       0 / 0   
+  Free  PE / Size       2046 / 7.99 GiB
+  VG UUID               lnNHkq-ax02-ZakP-ClQX-eU0l-sJTn-F1eTGl
+   
+
+4) 创建逻辑卷oracle 
+
+[root@disk ~]# lvcreate -L 4G -n oracle data
+  Logical volume "oracle" created
+[root@disk ~]# lvscan 
+  ACTIVE            '/dev/data/oracle' [4.00 GiB] inherit
+[root@disk ~]# 
+
+
+5) 创建ｅｘｔ４文件系统，并自动挂载 
+
+[root@disk ~]# mkfs.ext4 /dev/data/oracle 
+
+[root@disk ~]# mkdir /uplooking_oracle
+
+[root@disk ~]# vim /etc/fstab 
+/dev/data/oracle	/uplooking_oracle	ext4	defaults	0 0
+
+[root@disk ~]# mount -a
+[root@disk ~]# df -hT
+Filesystem           Type   Size  Used Avail Use% Mounted on
+/dev/vda2            ext4   7.6G  698M  6.5G  10% /
+tmpfs                tmpfs  246M     0  246M   0% /dev/shm
+/dev/vda1            ext4   190M   26M  155M  14% /boot
+/dev/mapper/data-oracle
+                     ext4   3.9G  8.0M  3.7G   1% /uplooking_oracle
+[root@disk ~]# 
+
+
+
+示例：扩展逻辑卷/dev/data/oracle 
+
+步骤：
+
+	1	扩展逻辑卷物理空间 
+	2	扩展文件系统
+
+1） 将逻辑卷/dev/data/oracle扩展到6GB 
+
+[root@disk ~]# lvextend -L +2G /dev/data/oracle 				>>>扩展物理空间
+  Size of logical volume data/oracle changed from 4.00 GiB (1024 extents) to 6.00 GiB (1536 extents).
+  Logical volume oracle successfully resized
+
+
+[root@disk ~]# resize2fs /dev/data/oracle 						>>>扩展文件系统
+resize2fs 1.41.12 (17-May-2010)
+Filesystem at /dev/data/oracle is mounted on /uplooking_oracle; on-line resizing required
+old desc_blocks = 1, new_desc_blocks = 1
+Performing an on-line resize of /dev/data/oracle to 1572864 (4k) blocks.
+The filesystem on /dev/data/oracle is now 1572864 blocks long.
+
+	
+2） 将逻辑卷/dev/data/oracle扩展到12GB 
+
+[root@disk ~]# pvcreate /dev/vdd 
+[root@disk ~]# vgextend data /dev/vdd 
+[root@disk ~]# vgdisplay 
+  --- Volume group ---
+  VG Name               data
+  System ID             
+  Format                lvm2
+  Metadata Areas        3
+  Metadata Sequence No  4
+  VG Access             read/write
+  VG Status             resizable
+  MAX LV                0
+  Cur LV                1
+  Open LV               1
+  Max PV                0
+  Cur PV                3
+  Act PV                3
+  VG Size               15.99 GiB
+  PE Size               4.00 MiB
+  Total PE              4093
+  Alloc PE / Size       1536 / 6.00 GiB
+  Free  PE / Size       2557 / 9.99 GiB					>>>确保卷组剩余空间足够 
+  VG UUID               lnNHkq-ax02-ZakP-ClQX-eU0l-sJTn-F1eTGl
+
+
+[root@disk ~]# lvextend -L +6G /dev/data/oracle 
+[root@disk ~]# resize2fs /dev/data/oracle 
+
+
+
+
+
+LVM快照snapshot  
+
+	作用： 实现数据几乎热备份  
+
+注意：
+	1	原有逻辑卷数据变化，不会同步到快照 
+	2	快照应该只读权限
+	3	指定快照的生存周期(容量的方式)
+
+
+
+示例： 
+
+为逻辑卷创建快照oraclesnapshot, 备份快照中的数据 
+
+1） 创建快照 
+
+[root@disk ~]# lvcreate -s -p r -L 200M -n oraclesnapshot /dev/data/oracle 		>>> -p r设置只读权限 
+  Logical volume "oraclesnapshot" created
+[root@disk ~]# lvscan 
+  ACTIVE   Original '/dev/data/oracle' [12.00 GiB] inherit
+  ACTIVE   Snapshot '/dev/data/oraclesnapshot' [200.00 MiB] inherit
+[root@disk ~]# 
+
+2） 挂载快照，备份数据 
+
+[root@disk ~]# mount /dev/data/oraclesnapshot /snapshot/
+mount: block device /dev/mapper/data-oraclesnapshot is write-protected, mounting read-only
+[root@disk ~]# 
+[root@disk ~]# tar cjf /backup/oracle_`date +%F-%T`.tar.bz2 /snapshot/
+
+3） 删除快照 
+
+[root@disk ~]# umount /snapshot/
+[root@disk ~]# lvremove -f /dev/data/oraclesnapshot 
+
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+
+
+RAID	独立冗余磁盘阵列 
+
+
+	优势：
+		1	加快磁盘读写数据的速度
+		2	有效的保证数据安全性 
+
+
+RAID级别
+
+RAID-0
+
+	至少需要两块相同容量的磁盘
+	提升数据读写速度
+	安全性低	
+
+RAID-1 
+
+	至少需要两块相同容量的磁盘
+	提升数据的安全性 
+	容量是所有磁盘容量的1/2
+
+
+RAID-5
+
+	至少需要三块相同容量的磁盘
+	提升数据的读写速度
+	提升数据的安全性(最多只允许坏1块硬盘)
+
+
+RAID-10
+	
+	至少需要四块相同容量的硬盘
+	最多允许2块硬盘损坏(不能是同一个RAID1中的磁盘)
+
+
+
+RAID实现方式：
+	RAID卡		硬RAID
+	软件模拟	软RAID（mdadm）
+
+
+
+示例：
+
+配置RAID 5  
+
+
+[root@disk ~]# fdisk -l /dev/vd{e,f,g}
+
+ Device Boot      Start         End      Blocks   Id  System
+/dev/vde1               1       16644     8388544+  fd  Linux raid autodetect
+
+
+  Device Boot      Start         End      Blocks   Id  System
+/dev/vdf1               1       16644     8388544+  fd  Linux raid autodetect
+
+ Device Boot      Start         End      Blocks   Id  System
+/dev/vdg1               1       16644     8388544+  fd  Linux raid autodetect
+
+
+创建RAID 5设备 
+
+[root@disk ~]# mdadm -C /dev/md0 -n 3 -l 5 /dev/vde1 /dev/vdf1 /dev/vdg1 
+mdadm: Defaulting to version 1.2 metadata
+mdadm: array /dev/md0 started.
+
+		-C /dev/md0	创建ｒａｉｄ设备，设备文件名称是md0
+		-n 3			指定组成RAID设备的分区数量
+		-l 5			指定RAID级别		
+
+[root@disk ~]# cat /proc/mdstat 				>>>查看RAID设备的状态信息
+Personalities : [raid6] [raid5] [raid4] 
+md0 : active raid5 vdg1[3] vdf1[1] vde1[0]
+      16768000 blocks super 1.2 level 5, 512k chunk, algorithm 2 [3/2] [UU_]
+      [============>........]  recovery = 62.1% (5210368/8384000) finish=0.5min speed=95876K/sec
+      
+unused devices: <none>
+
+
+使用RAID设备
+
+[root@disk ~]# mkfs.ext4 /dev/md0 
+
+[root@disk ~]# vim /etc/fstab 
+/dev/md0		/uplooking_mysql	ext4	defaults	0 0
+
+[root@disk ~]# mount -a 
+[root@disk ~]# df -hT
+Filesystem           Type   Size  Used Avail Use% Mounted on
+/dev/vda2            ext4   7.6G  698M  6.5G  10% /
+tmpfs                tmpfs  246M     0  246M   0% /dev/shm
+/dev/vda1            ext4   190M   26M  155M  14% /boot
+/dev/mapper/data-oracle
+                     ext4    12G  310M   11G   3% /uplooking_oracle
+/dev/md0             ext4    16G   44M   15G   1% /uplooking_mysql
+
+
+生成RAID 5设备的配置文件 
+
+[root@disk ~]# mdadm -Ds /dev/md0 > /etc/mdadm.conf
+[root@disk ~]# cat /etc/mdadm.conf
+ARRAY /dev/md0 metadata=1.2 name=disk.linux.com:0 UUID=1176655a:83c567c8:0f3bb4b6:6f7c3522
+[root@disk ~]# 
+
+
+添加Hot spare热备盘 
+
+[root@disk ~]# mdadm -a /dev/md0 /dev/vdh1 
+mdadm: added /dev/vdh1
+
+[root@disk ~]# cat /proc/mdstat 
+Personalities : [raid6] [raid5] [raid4] 
+md0 : active raid5 vdh1[4](S) vdg1[3] vdf1[1] vde1[0]
+      16768000 blocks super 1.2 level 5, 512k chunk, algorithm 2 [3/3] [UUU]
+      
+unused devices: <none>
+
+
+模拟/dev/vde1故障 
+
+[root@disk ~]# mdadm -f /dev/md0 /dev/vde1
+mdadm: set /dev/vde1 faulty in /dev/md0
+
+[root@disk ~]# cat /proc/mdstat 
+Personalities : [raid6] [raid5] [raid4] 
+md0 : active raid5 vdh1[4] vdg1[3] vdf1[1] vde1[0](F)
+      16768000 blocks super 1.2 level 5, 512k chunk, algorithm 2 [3/2] [_UU]
+      [=====>...............]  recovery = 28.7% (2413184/8384000) finish=3.9min speed=24925K/sec
+      
+unused devices: <none>
+
+
+热移除设备 
+
+[root@disk ~]# mdadm -r /dev/md0 /dev/vde1 
+mdadm: hot removed /dev/vde1 from /dev/md0
+
+[root@disk ~]# cat /proc/mdstat 
+Personalities : [raid6] [raid5] [raid4] 
+md0 : active raid5 vdh1[4] vdg1[3] vdf1[1]
+      16768000 blocks super 1.2 level 5, 512k chunk, algorithm 2 [3/2] [_UU]
+      [===========>.........]  recovery = 56.5% (4740480/8384000) finish=2.4min speed=24519K/sec
+      
+unused devices: <none>
+[root@disk ~]# 
+
+
+查看/dev/md0的状态信息 
+
+[root@disk ~]# mdadm -D /dev/md0 
+/dev/md0:
+        Version : 1.2
+  Creation Time : Sun Nov  6 14:41:42 2016
+     Raid Level : raid5
+     Array Size : 16768000 (15.99 GiB 17.17 GB)
+  Used Dev Size : 8384000 (8.00 GiB 8.59 GB)
+   Raid Devices : 3
+  Total Devices : 3
+    Persistence : Superblock is persistent
+
+    Update Time : Sun Nov  6 15:06:18 2016
+          State : clean 
+ Active Devices : 3
+Working Devices : 3
+ Failed Devices : 0
+  Spare Devices : 0
+
+         Layout : left-symmetric
+     Chunk Size : 512K
+
+           Name : disk.linux.com:0  (local to host disk.linux.com)
+           UUID : 1176655a:83c567c8:0f3bb4b6:6f7c3522
+         Events : 39
+
+    Number   Major   Minor   RaidDevice State
+       4     252      113        0      active sync   /dev/vdh1
+       1     252       81        1      active sync   /dev/vdf1
+       3     252       97        2      active sync   /dev/vdg1
+[root@disk ~]# 
+
+
+停止与启动RAID设备
+
+方法1： 存在/etc/mdadm.conf配置文件时 
+
+[root@disk ~]# mdadm -S /dev/md0 
+mdadm: stopped /dev/md0
+
+[root@disk ~]# mdadm -As /dev/md0
+mdadm: /dev/md0 has been started with 3 drives.
+
+
+方法2： 无配置文件时，必须手工指定物理设备名称 
+
+[root@disk ~]# mdadm -S /dev/md0 
+mdadm: stopped /dev/md0
+
+[root@disk ~]# mdadm -A /dev/md0 /dev/vd{g,f,h}1
+mdadm: /dev/md0 has been started with 3 drives.
+[root@disk ~]# 
+
+
+
+
+
+
+
+
+
+
+

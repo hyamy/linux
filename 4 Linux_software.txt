@@ -1,0 +1,369 @@
+软件管理 
+
+软件类型	CentOS/RHEL/Fedora
+
+	rpm软件		*.rpm		redhat package managerment
+	源码软件	*.tar.gz, *.tar.bz2
+
+
+rpm软件管理
+
+rpm软件安装包
+
+	光盘自带
+	互联网,官方网站 
+		http://rpmfind.net/
+		https://pkgs.org/
+	
+查看光盘自带的rpm软件安装包 
+
+[root@localhost ~]# mount /dev/cdrom /mnt/
+mount: block device /dev/sr0 is write-protected, mounting read-only
+[root@localhost ~]# ls /mnt/Packages/
+
+rpm软件安装包名称组成：
+
+	talk-server-0.17-36.el6.x86_64.rpm
+
+		talk-server		软件名称
+		0.17				软件版本
+		36.el6				软件运行平台
+		x86_64				64位系统
+			i686			32位系统
+			noarch			
+
+
+rpm软件管理------rpm/yum 
+
+rpm命令的使用
+
+1	安装vsftpd软件 
+
+# rpm -ivh <软件安装包名称>
+
+	i	安装
+	v	显示安装过程 
+	h	以＃的方式显示安装进度 
+
+[root@localhost ~]# rpm -ivh /mnt/Packages/vsftpd-2.2.2-12.el6_5.1.x86_64.rpm 
+warning: /mnt/Packages/vsftpd-2.2.2-12.el6_5.1.x86_64.rpm: Header V3 RSA/SHA1 Signature, key ID c105b9de: NOKEY
+Preparing...                ########################################### [100%]
+   1:vsftpd                 ########################################### [100%]
+[root@localhost ~]# 
+
+
+示例：安装httpd软件 
+
+[root@localhost ~]# rpm -ivh /mnt/Packages/httpd-2.2.15-39.el6.centos.x86_64.rpm 
+warning: /mnt/Packages/httpd-2.2.15-39.el6.centos.x86_64.rpm: Header V3 RSA/SHA1 Signature, key ID c105b9de: NOKEY
+error: Failed dependencies:				>>>依赖失败 
+	/etc/mime.types is needed by httpd-2.2.15-39.el6.centos.x86_64
+	apr-util-ldap is needed by httpd-2.2.15-39.el6.centos.x86_64
+	httpd-tools = 2.2.15-39.el6.centos is needed by httpd-2.2.15-39.el6.centos.x86_64
+	libapr-1.so.0()(64bit) is needed by httpd-2.2.15-39.el6.centos.x86_64
+	libaprutil-1.so.0()(64bit) is needed by httpd-2.2.15-39.el6.centos.x86_64
+
+选项： 
+	--nodeps		忽略依赖关系 
+
+[root@localhost ~]# rpm -ivh --nodeps /mnt/Packages/httpd-2.2.15-39.el6.centos.x86_64.rpm 
+warning: /mnt/Packages/httpd-2.2.15-39.el6.centos.x86_64.rpm: Header V3 RSA/SHA1 Signature, key ID c105b9de: NOKEY
+Preparing...                ########################################### [100%]
+   1:httpd                  ########################################### [100%]
+
+
+选项：
+	--force 	强制重新安装 
+
+[root@localhost ~]# rpm -ivh --force /mnt/Packages/vsftpd-2.2.2-12.el6_5.1.x86_64.rpm 
+warning: /mnt/Packages/vsftpd-2.2.2-12.el6_5.1.x86_64.rpm: Header V3 RSA/SHA1 Signature, key ID c105b9de: NOKEY
+Preparing...                ########################################### [100%]
+   1:vsftpd                 ########################################### [100%]
+
+
+
+2	rpm软件查看操作 
+
+1)	查看httpd是否安装 
+
+[root@localhost ~]# rpm -q httpd
+httpd-2.2.15-39.el6.centos.x86_64
+
+[root@localhost ~]# rpm -qa | grep vim
+vim-common-7.2.411-1.8.el6.x86_64
+vim-enhanced-7.2.411-1.8.el6.x86_64
+vim-minimal-7.2.411-1.8.el6.x86_64
+
+
+2）	查询httpd软件的说明信息 
+
+[root@localhost ~]# rpm -qi httpd
+Name        : httpd                        Relocations: (not relocatable)
+Version     : 2.2.15                            Vendor: CentOS
+Release     : 39.el6.centos                 Build Date: 2014年10月16日 星期四 22时49分26秒
+Install Date: 2016年10月30日 星期日 10时21分16秒      Build Host: c6b9.bsys.dev.centos.org
+Group       : System Environment/Daemons    Source RPM: httpd-2.2.15-39.el6.centos.src.rpm
+Size        : 3085394                          License: ASL 2.0
+Signature   : RSA/SHA1, 2014年10月18日 星期六 04时02分19秒, Key ID 0946fca2c105b9de
+Packager    : CentOS BuildSystem <http://bugs.centos.org>
+URL         : http://httpd.apache.org/
+Summary     : Apache HTTP Server
+Description :
+The Apache HTTP Server is a powerful, efficient, and extensible
+web server.
+
+
+3)	查询httpd软件生成的文件及目录 
+
+[root@localhost ~]# rpm -ql httpd | less
+
+
+4）	查询文件由哪个软件生成 
+
+[root@localhost ~]# which lvscan
+/sbin/lvscan
+[root@localhost ~]# rpm -qf /sbin/lvscan 
+lvm2-2.02.111-2.el6.x86_64
+
+
+5）	查询httpd软件的配置文件 
+
+[root@localhost ~]# rpm -qc httpd
+/etc/httpd/conf.d/welcome.conf
+/etc/httpd/conf/httpd.conf
+/etc/httpd/conf/magic
+/etc/logrotate.d/httpd
+/etc/sysconfig/htcacheclean
+/etc/sysconfig/httpd
+/var/www/error/HTTP_BAD_GATEWAY.html.var
+/var/www/error/HTTP_BAD_REQUEST.html.var
+/var/www/error/HTTP_FORBIDDEN.html.var
+/var/www/error/HTTP_GONE.html.var
+
+
+6） 查询httpd软件的说明文档
+
+[root@localhost ~]# rpm -qd httpd
+/usr/share/doc/httpd-2.2.15/ABOUT_APACHE
+/usr/share/doc/httpd-2.2.15/CHANGES
+/usr/share/doc/httpd-2.2.15/LICENSE
+/usr/share/doc/httpd-2.2.15/NOTICE
+/usr/share/doc/httpd-2.2.15/README
+/usr/share/doc/httpd-2.2.15/VERSIONING
+/usr/share/man/man8/apachectl.8.gz
+/usr/share/man/man8/htcacheclean.8.gz
+/usr/share/man/man8/httpd.8.gz
+/usr/share/man/man8/rotatelogs.8.gz
+/usr/share/man/man8/suexec.8.gz
+
+
+3	卸载软件 
+
+# rpm -e <软件名称>
+
+[root@localhost ~]# rpm -e httpd
+
+[root@localhost ~]# rpm -e --nodeps python
+
+
+4	升级软件 
+
+# rpm -Uvh <软件安装包名称>
+
+	注意： 同时会卸载旧版本软件 
+
+
+[root@localhost ~]# rpm -Uvh --nodeps /tmp/httpd-2.4.23-4.fc23.x86_64.rpm 
+warning: /tmp/httpd-2.4.23-4.fc23.x86_64.rpm: Header V3 RSA/SHA256 Signature, key ID 34ec9cba: NOKEY
+Preparing...                ########################################### [100%]
+   1:httpd                  ########################################### [100%]
+
+
+
+
+yum方式 
+
+	优势： 自动解决软件的依赖关系 
+
+
+配置yum源--------/etc/yum.repos.d/*.repo
+
+类型：
+	本地yum源		baseurl=file:///mnt
+	FTP源			baseurl=ftp://172.16.8.100/centos6.6
+	HTTP源			baseurl=http://
+
+			http://mirrors.163.com
+			http://mirrors.aliyun.com
+			http://mirror.centos.org/
+		
+			baseurl=http://mirrors.163.com/centos/6.8/cloud/x86_64/openstack-juno/
+			baseurl=http://mirrors.163.com/centos/6.8/storage/x86_64/gluster-3.8/
+	
+
+示例： 配置本地yum源 
+
+[root@localhost ~]# vim /etc/yum.repos.d/local.repo
+[local]
+name=localyum
+baseurl=file:///mnt
+enabled=1
+gpgcheck=0
+
+[root@localhost ~]# mount /dev/cdrom /mnt
+
+[root@localhost ~]# yum clean all							>>>清除yum缓存
+已加载插件：fastestmirror
+Cleaning repos: local
+清理一切
+Cleaning up list of fastest mirrors
+
+[root@localhost ~]# yum repolist							>>>列出可用的yum源
+已加载插件：fastestmirror
+Determining fastest mirrors
+local                                                                                   | 4.0 kB     00:00 ... 
+local/primary_db                                                                        | 4.5 MB     00:00 ... 
+仓库标识                                             仓库名称                                             状态
+local                                                localyum                                             6,518
+repolist: 6,518
+
+
+yum工具的使用：
+
+# yum install -y <软件名称>				>>>安装软件 
+
+# yum remove -y <软件名称>				>>>卸载软件 
+
+# yum update -y <软件名称>				>>>更新软件
+
+# yum list all 							>>>显示yum源中所有软件名称 
+
+[root@localhost ~]# yum info httpd				>>>查询软件的说明信息 
+已加载插件：fastestmirror
+Loading mirror speeds from cached hostfile
+已安装的软件包
+Name        : httpd
+Arch        : x86_64
+Version     : 2.2.15
+Release     : 39.el6.centos
+Size        : 2.9 M
+Repo        : installed
+From repo   : local
+Summary     : Apache HTTP Server
+URL         : http://httpd.apache.org/
+License     : ASL 2.0
+Description : The Apache HTTP Server is a powerful, efficient, and extensible
+            : web server.
+
+[root@localhost ~]# yum provides /bin/ls				>>>查询文件由哪个软件生成
+已加载插件：fastestmirror
+Loading mirror speeds from cached hostfile
+coreutils-8.4-37.el6.x86_64 : A set of basic GNU tools commonly used in shell scripts
+Repo        : local
+匹配来自于:
+Filename    : /bin/ls
+
+coreutils-8.4-37.el6.x86_64 : A set of basic GNU tools commonly used in shell scripts
+Repo        : installed
+匹配来自于:
+Other       : 提供依赖满足：/bin/ls
+
+
+# yum grouplist			>>>列出软件组 
+
+# yum groupinstall -y <软件组名称>			
+
+[root@localhost ~]# yum groupinstall -y "SNMP Support"
+
+
+保证光盘开机自动挂载到/mnt目录
+
+# vim /etc/rc.d/rc.local
+
+	mount /dev/cdrom /mnt
+
+
+
+创建本地yum仓库
+
+1)
+[root@localhost ~]# mount -o loop /linux/centos6u6.iso /mnt/		或		# mount /dev/cdrom /mnt 
+[root@localhost ~]# mkdir /software
+[root@localhost ~]# cp /mnt/Packages/* /software/
+
+2) 生成yum元数据文件 
+
+# yum install -y createrepo 
+[root@localhost ~]# createrepo /software/
+Spawning worker 0 with 4184 pkgs
+Workers Finished
+Gathering worker results
+
+Saving Primary metadata
+Saving file lists metadata
+Saving other metadata
+Generating sqlite DBs
+Sqlite DBs complete
+
+[root@localhost ~]# vim /etc/yum.repos.d/local.repo
+[local]
+name=localyum
+baseurl=file:///software
+enabled=1
+gpgcheck=0
+
+[root@localhost ~]# yum clean all
+已加载插件：fastestmirror, refresh-packagekit, security
+Cleaning repos: local
+清理一切
+Cleaning up list of fastest mirrors
+[root@localhost ~]# yum repolist
+已加载插件：fastestmirror, refresh-packagekit, security
+Determining fastest mirrors
+local                                                                    | 2.9 kB     00:00 ... 
+local/primary_db                                                         | 3.4 MB     00:00 ... 
+仓库标识                                     仓库名称                                      状态
+local                                        localyum                                      4,184
+repolist: 4,184
+
+
+
+示例： 配置FTP源
+
+[root@localhost ~]# cat /etc/yum.repos.d/ftp.repo 
+[Centos6.6]
+name=ftpyum
+baseurl=ftp://172.16.8.100/centos6.6
+enabled=1
+gpgcheck=0
+
+
+示例： 配置HTTP源 
+
+[root@localhost ~]# cat /etc/yum.repos.d/openstack.repo 
+[openstack]
+name=openstackyum
+baseurl=http://mirrors.aliyun.com/centos/6.8/cloud/x86_64/openstack-juno/
+enabled=1
+gpgcheck=0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

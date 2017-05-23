@@ -1,0 +1,272 @@
+网络服务 
+
+SSH远程管理服务 
+
+	管理服务器的管理方式：
+		本地管理(安装系统、故障修复)
+		远程管理(借助于网络)
+			SSH 
+		
+		
+SSH远程服务的实现方式：
+
+	服务器：
+		openssh-server, openssh-clients
+			openssh-server: 提供sshd服务 
+			
+		服务：sshd服务
+		端口：22/tcp
+		
+	客户端：
+		Windows:
+			SecureCRT
+			Xmanager
+			Putty
+			
+		Linux: 
+			ssh命令(openssh-clients)
+		
+		
+SSH远程连接命令的使用：
+
+# ssh <user>@<ip>
+
+# ssh admin@192.168.87.101 
+
+
+远程执行命令：
+
+# ssh user@ip 'COMMAND'
+
+[root@node1 ~]# ssh 192.168.87.102 'ifconfig'
+root@192.168.87.102's password: 
+
+
+远程拷贝文件 
+
+	scp, rsync
+	
+# scp <src_file> <dst_file>
+
+	src_file源文件：			/etc/hosts 
+	dst_file目的文件			IP:<dir>
+	
+[root@node1 ~]# scp /etc/passwd 192.168.87.102:/tmp
+
+[root@node1 ~]# scp 192.168.87.102:/etc/hosts /tmp/
+
+
+# rsync -avH <src_file> <dst_file>
+
+[root@node1 ~]# rsync -avH 192.168.87.102:/sh /bj/			>>>会同步整个目录
+	
+[root@node1 ~]# rsync -avH 192.168.87.102:/sh/ /bj/			>>>仅同步目录下的文件  
+
+
+
+SSH服务的认证方式：
+
+	基于用户名、密码的认证(默认)
+	基于密钥的方式
+		1) 在客户端生成密钥对(公钥，私钥)
+		2) 将公钥拷贝到对应的服务器上
+
+配置基于密钥的SSH远程：
+
+
+[root@node1 ~]# ssh-keygen -t rsa
+[root@node1 ~]# ls /root/.ssh/
+id_rsa  id_rsa.pub  known_hosts
+
+
+[root@node1 ~]# ssh-copy-id -i 192.168.87.102
+root@192.168.87.102's password: 
+Now try logging into the machine, with "ssh '192.168.87.102'", and check in:
+
+  .ssh/authorized_keys
+
+to make sure we haven't added extra keys that you weren't expecting.
+
+
+
+SSH的配置文件 ----------- /etc/ssh/sshd_config
+
+# cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak 
+# vim /etc/ssh/sshd_config
+
+Port 22						>>>> 改为10000-65535间的随机端口
+PermitRootLogin	 no			>>>禁止root远程连接登录地 
+PasswordAuthentication no	>>>禁用基于用户名、密码的认证 
+
+UseDNS no 
+GSSAPIAUTHTICATION no 		>>>禁用主机名解析，加速SSH连接 
+
+# service sshd restart 
+
+
+
+======================================================================
+
+FTP服务
+
+FTP-----File Transport Protocol 文件传输协议
+
+
+FTP工作过程：
+	命令连接
+	数据连接
+	
+FTP的工作模式：
+	主动连接	(命令连接21/tcp, 数据连接20/tcp)
+	被动连接	(命令连接21/tcp, 数据连接>1024/tcp)
+
+	
+实现FTP服务的软件：
+
+	软件名称：vsftpd
+	配置文件：/etc/vsftpd/vsftpd.conf
+	服务：vsftpd
+	端口：21/tcp 
+
+
+FTP服务访问方式：
+
+	匿名访问(ftp用户)
+	本地用户认证的访问
+
+FTP服务的根目录：
+
+	对应的用户的宿主目录
+	
+		ftp用户宿主目录的文件 ----------- /var/ftp 
+		
+	
+	
+示例：搭建匿名访问的FTP服务
+
+1) 安装vsftpd软件 
+
+[root@ftpserver ~]# yum install -y vsftpd
+[root@ftpserver ~]# touch /var/ftp/{1..10}.txt
+
+
+2) 启动服务，并设置开机自动启动 
+
+[root@ftpserver ~]# service vsftpd start
+为 vsftpd 启动 vsftpd：                                    [确定]
+[root@ftpserver ~]# chkconfig vsftpd on
+[root@ftpserver ~]# chkconfig --list vsftpd
+vsftpd         	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+[root@ftpserver ~]# 
+ 
+[root@ftpserver ~]# netstat -antp | grep :21
+tcp        0      0 0.0.0.0:21                  0.0.0.0:*                   LISTEN      49480/vsftpd        
+[root@ftpserver ~]# 
+	
+	
+3) 关闭防火墙iptables, SELinux
+
+[root@ftpserver ~]# service iptables stop
+iptables：将链设置为政策 ACCEPT：filter                    [确定]
+iptables：清除防火墙规则：                                 [确定]
+iptables：正在卸载模块：                                   [确定]
+[root@ftpserver ~]# 
+[root@ftpserver ~]# chkconfig iptables off
+[root@ftpserver ~]# chkconfig --list iptables
+iptables       	0:关闭	1:关闭	2:关闭	3:关闭	4:关闭	5:关闭	6:关闭
+[root@ftpserver ~]# 
+	
+
+[root@ftpserver ~]# getenforce 				 >>>>查看SELinux的状态
+Disabled
+
+关闭SELinux：
+
+方法1：临时生效
+
+# setenforce 0 
+	
+
+方法2：永久生效 
+
+# vim /etc/sysconfig/selinux 
+
+	SELINUX=disabled
+	
+需要重启系统生效
+
+	
+4) 测试访问 
+
+[root@node2 ~]# lftp 192.168.87.101
+lftp 192.168.87.101:~> ls
+-rw-r--r--    1 0        0               0 Dec 11 13:18 1.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 10.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 2.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 3.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 4.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 5.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 6.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 7.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 8.txt
+-rw-r--r--    1 0        0               0 Dec 11 13:18 9.txt
+drwxr-xr-x    2 0        0            4096 Aug 04  2014 pub
+lftp 192.168.87.101:/> 
+lftp 192.168.87.101:/> get 1.txt 
+lftp 192.168.87.101:/> mget 2.txt 4.txt 6.txt 8.txt 
+Total 4 files transferred         
+lftp 192.168.87.101:/> exit
+
+
+	
+配置允许匿名用户能够上传文件  
+
+	注意：禁止匿名用户向FTP根目录上传文件  
+
+[root@ftpserver ~]# cp /etc/vsftpd/vsftpd.conf /etc/vsftpd/vsftpd.conf.bak 
+[root@ftpserver ~]# vim /etc/vsftpd/vsftpd.conf 
+
+	anon_upload_enable=YES
+	anon_mkdir_write_enable=YES 
+	
+[root@ftpserver ~]# service vsftpd restart 
+[root@ftpserver ~]# setfacl -m u:ftp:rwx /var/ftp/pub 
+
+
+允许匿名用户能够修改、删除文件  
+
+[root@ftpserver ~]# vim /etc/vsftpd/vsftpd.conf 
+	
+	.....
+	anon_other_write_enable=YES 
+	
+[root@ftpserver ~]# service vsftpd restart 
+
+
+为了保证其他用户可下载匿名用户上传的文件 
+
+[root@ftpserver ~]# vim /etc/vsftpd/vsftpd.conf 
+	
+	....
+	anon_umask=022
+	
+[root@ftpserver ~]# service vsftpd restart 
+
+
+指定服务器本地的/company目录作为匿名用户的根目录 
+
+[root@ftpserver ~]# vim /etc/vsftpd/vsftpd.conf 
+	
+	....
+	anon_root=/company
+	
+[root@ftpserver ~]# service vsftpd restart 
+
+
+
+
+
+
+
+
+

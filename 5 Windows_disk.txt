@@ -1,0 +1,533 @@
+Linux磁盘管理　
+
+	基本磁盘管理
+	LVM管理
+	RAID磁盘阵列　
+
+基本磁盘管理　
+
+
+磁盘表示方法：
+
+	机械硬盘		固态硬盘(SSD) 
+
+	/dev/sda			sd: SCSI,SATA,SAS接口(iSCSI)		a	第１块硬盘　			/dev/sdb, /dev/sdc, /dev/sdd
+
+
+磁盘分区表示方法：
+
+类型：
+
+	主分区		primary
+	扩展分区	extended			<=4
+		逻辑分区	logical
+
+
+/dev/sda1-----/dev/sda4		主分区，扩展分区
+
+/dev/sda5			第１个逻辑分区　
+
+
+格式化/创建文件系统
+	
+	Windows: NTFS, FAT32
+
+
+	Linux:
+
+		ext2, ext3, ext4, xfs, FAT, NTFS(ntfs-3g-2011.4.12-5.el6.x86_64.rpm)	
+
+		swap(交换文件系统)		磁盘分区(swap)
+
+
+1	查看磁盘名称，磁盘分区　
+
+[root@localhost ~]# fdisk -l
+
+Disk /dev/sda: 1000.2 GB, 1000204886016 bytes
+255 heads, 63 sectors/track, 121601 cylinders
+Units = cylinders of 16065 * 512 = 8225280 bytes
+Sector size (logical/physical): 512 bytes / 4096 bytes
+I/O size (minimum/optimal): 4096 bytes / 4096 bytes
+Disk identifier: 0xb199c3f9
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sda1   *           1          26      204800   83  Linux
+Partition 1 does not end on cylinder boundary.
+/dev/sda2              26        1070     8388608   82  Linux swap / Solaris
+/dev/sda3            1070      121602   968167424   83  Linux
+
+[root@localhost ~]# lsblk 
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+sda      8:0    0 931.5G  0 disk 
+├─sda1   8:1    0   200M  0 part /boot
+├─sda2   8:2    0     8G  0 part [SWAP]
+└─sda3   8:3    0 923.3G  0 part /
+sr0     11:0    1  1024M  0 rom  
+
+
+
+2	管理磁盘分区　
+
+# fdisk <磁盘名称>
+
+	n	新建分区
+	d	删除分区
+	p	显示分区
+	t	修改分区的system ID(默认83)
+	w	保存退出
+	q	退出不保存 
+
+
+3	创建文件系统 
+
+用法1：
+
+# mkfs -t <文件系统>　<磁盘分区名称>
+
+[root@disk ~]# mkfs -t ext3 /dev/vdb1
+
+
+用法2：
+
+[root@disk ~]# mkfs.ext3 /dev/vdb1
+
+
+4	挂载 
+
+1) 挂载分区 
+
+# mount <设备文件> <挂载点>
+
+# mount /dev/vdb1 /bj 
+
+
+2) 查看挂载 
+
+[root@disk ~]# df -hT
+Filesystem     Type   Size  Used Avail Use% Mounted on
+/dev/vda2      ext4   7.6G  673M  6.6G  10% /
+tmpfs          tmpfs  246M     0  246M   0% /dev/shm
+/dev/vda1      ext4   190M   26M  155M  14% /boot
+
+[root@disk ~]# mount
+/dev/vda2 on / type ext4 (rw)
+proc on /proc type proc (rw)
+sysfs on /sys type sysfs (rw)
+devpts on /dev/pts type devpts (rw,gid=5,mode=620)
+tmpfs on /dev/shm type tmpfs (rw)
+/dev/vda1 on /boot type ext4 (rw)
+none on /proc/sys/fs/binfmt_misc type binfmt_misc (rw)
+
+
+3）	卸载
+
+# umount <设备文件>
+
+# umount <挂载点>
+
+注意： 当前目录不能是挂载点目录
+
+
+
+示例：
+
+规划硬盘分区如下：
+
+	主分区		1G		ext4	/uplooking
+	主分区		1G		ext4	/oracle
+	逻辑分区	1G		ext4	/mysql
+	逻辑分区	1G		ext4 	/redis
+
+
+1	创建分区 
+
+[root@disk ~]# fdisk /dev/vdb 
+
+WARNING: DOS-compatible mode is deprecated. It's strongly recommended to
+         switch off the mode (command 'c') and change display units to
+         sectors (command 'u').
+
+Command (m for help): n
+Command action
+   e   extended
+   p   primary partition (1-4)
+p
+Partition number (1-4): 1
+First cylinder (1-16644, default 1): 
+Using default value 1
+Last cylinder, +cylinders or +size{K,M,G} (1-16644, default 16644): +1G
+
+Command (m for help): n
+Command action
+   e   extended
+   p   primary partition (1-4)
+p
+Partition number (1-4): 2
+First cylinder (2083-16644, default 2083): 
+Using default value 2083
+Last cylinder, +cylinders or +size{K,M,G} (2083-16644, default 16644): +1G
+
+Command (m for help): n
+Command action
+   e   extended
+   p   primary partition (1-4)
+e
+Partition number (1-4): 3
+First cylinder (4165-16644, default 4165): 
+Using default value 4165
+Last cylinder, +cylinders or +size{K,M,G} (4165-16644, default 16644): 
+Using default value 16644
+
+Command (m for help): n
+Command action
+   l   logical (5 or over)
+   p   primary partition (1-4)
+l
+First cylinder (4165-16644, default 4165): 
+Using default value 4165
+Last cylinder, +cylinders or +size{K,M,G} (4165-16644, default 16644): +1G
+
+Command (m for help): n
+Command action
+   l   logical (5 or over)
+   p   primary partition (1-4)
+l
+First cylinder (6247-16644, default 6247): 
+Using default value 6247
+Last cylinder, +cylinders or +size{K,M,G} (6247-16644, default 16644): +1G
+
+Command (m for help): p
+
+Disk /dev/vdb: 8589 MB, 8589934592 bytes
+16 heads, 63 sectors/track, 16644 cylinders
+Units = cylinders of 1008 * 512 = 516096 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk identifier: 0x775a0c9f
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/vdb1               1        2082     1049296+  83  Linux
+/dev/vdb2            2083        4164     1049328   83  Linux
+/dev/vdb3            4165       16644     6289920    5  Extended
+/dev/vdb5            4165        6246     1049296+  83  Linux
+/dev/vdb6            6247        8328     1049296+  83  Linux
+
+Command (m for help): w
+The partition table has been altered!
+
+Calling ioctl() to re-read partition table.
+Syncing disks.
+[root@disk ~]# 
+
+
+[root@disk ~]# partprobe /dev/vdb				>>>使内核重新读取/ｄｅｖ/ｖｄｂ的分区表 
+[root@disk ~]# cat /proc/partitions 
+major minor  #blocks  name
+
+ 252        0    8388608 vda
+ 252        1     204800 vda1
+ 252        2    8182784 vda2
+ 252       16    8388608 vdb
+ 252       17    1049296 vdb1
+ 252       18    1049328 vdb2
+ 252       19          1 vdb3
+ 252       21    1049296 vdb5
+ 252       22    1049296 vdb6
+[root@disk ~]# 
+
+
+2	创建文件系统 
+
+[root@disk ~]# mkfs -t ext4 /dev/vdb1
+[root@disk ~]# mkfs -t ext4 /dev/vdb2 
+
+[root@disk ~]# mkfs.ext4 /dev/vdb5
+[root@disk ~]# mkfs.ext4 /dev/vdb6
+
+3	挂载分区 
+
+[root@disk ~]# mount /dev/vdb1 /uplooking/			>>>临时生效
+[root@disk ~]# mount /dev/vdb2 /oracle/
+
+[root@disk ~]# mount /dev/vdb5 /mysql/
+[root@disk ~]# mount /dev/vdb6 /redis/
+
+[root@disk ~]# df -hT
+Filesystem     Type   Size  Used Avail Use% Mounted on
+/dev/vda2      ext4   7.6G  677M  6.6G  10% /
+tmpfs          tmpfs  246M     0  246M   0% /dev/shm
+/dev/vda1      ext4   190M   26M  155M  14% /boot
+/dev/vdb1      ext4   976M  1.3M  924M   1% /uplooking
+/dev/vdb2      ext4   976M  1.3M  924M   1% /oracle
+/dev/vdb5      ext4   976M  1.3M  924M   1% /mysql
+/dev/vdb6      ext4   976M  1.3M  924M   1% /redis
+
+
+实现磁盘分区的自动挂载 
+
+/etc/fstab
+
+格式：
+
+设备文件/UUID	挂载点目录	文件系统	挂载参数(defaults)	是否自动备份(0)	是否检测磁盘(0)
+
+查看设备的UUID  
+
+[root@disk ~]# blkid /dev/vdb6 
+/dev/vdb6: UUID="e81c5d96-f5a4-4ecf-9e3d-c6555d87fe1d" TYPE="ext4" 
+[root@disk ~]# 
+
+
+[root@disk ~]# vim /etc/fstab 
+/dev/vdb1               /uplooking              ext4    defaults        0 0
+/dev/vdb2               /oracle                 ext4    defaults        0 0
+/dev/vdb5               /mysql                  ext4    defaults        0 0
+UUID=e81c5d96-f5a4-4ecf-9e3d-c6555d87fe1d       /redis          ext4    defaults        0 0
+
+[root@disk ~]# mount -a 
+
+
+
+
+示例：
+
+扩展系统当前的swap分区容量 
+
+1） 查看swap容量 
+
+[root@disk ~]# free -m
+             total       used       free     shared    buffers     cached
+Mem:           490         83        406          0          6         32
+-/+ buffers/cache:         44        445
+Swap:            0          0          0
+
+
+2) 创建2G的磁盘分区，并修改其ID为82 
+
+[root@disk ~]# fdisk /dev/vdb
+	n-->l--->+2G--->t--->82--->w
+[root@disk ~]# partprobe /dev/vdb  (#reboot)
+
+[root@disk ~]# cat /proc/partitions 
+major minor  #blocks  name
+
+ 252        0    8388608 vda
+ 252        1     204800 vda1
+ 252        2    8182784 vda2
+ 252       16    8388608 vdb
+ 252       17    1049296 vdb1
+ 252       18    1049328 vdb2
+ 252       19          1 vdb3
+ 252       21    1049296 vdb5
+ 252       22    1049296 vdb6
+ 252       23    2097616 vdb7
+[root@disk ~]# 
+
+3) 创建swap文件系统 
+
+[root@disk ~]# mkswap /dev/vdb7 
+Setting up swapspace version 1, size = 2097612 KiB
+no label, UUID=4efbf966-6cdc-4380-bef3-f2923a7516ed
+
+
+4）编辑/etc/fstab实现swap分区的自动挂载，并启用新的swap分区 
+
+[root@disk ~]# vim /etc/fstab 
+
+UUID=4efbf966-6cdc-4380-bef3-f2923a7516ed		swap	swap	defaults	0 0 
+
+[root@disk ~]# mount -a 
+[root@disk ~]# swapon -a 		>>启用所有新的swap分区 
+
+[root@disk ~]# free -m
+             total       used       free     shared    buffers     cached
+Mem:           490         85        404          0          7         32
+-/+ buffers/cache:         46        444
+Swap:         2048          0       2048
+[root@disk ~]# 
+
+
+
+
+
+
+
+限制磁盘分区存储数据的因素：
+
+	容量
+	inode	i节点
+
+查看磁盘分区的容量使用情况
+[root@disk ~]# df -hT /dev/vdb1 
+Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/vdb1      ext4  976M  1.3M  924M   1% /uplooking
+[root@disk ~]# 
+
+查看磁盘分区的inodes的使用情况
+[root@disk ~]# df -i /dev/vdb1
+Filesystem     Inodes IUsed IFree IUse% Mounted on
+/dev/vdb1       65664    21 65643    1% /uplooking
+[root@disk ~]# 
+
+
+磁盘配额 
+
+	针对对象：	用户， 用户组 
+	限制： 容量, inodes 
+	类型： 软限制， 硬限制    
+	软件： quota 
+
+大体步骤：(/dev/vdb2)
+
+1	配置分区支持磁盘配额功能
+2	在挂载点目录下创建磁盘配额配置文件
+3	根据需求编辑配置文件
+4	启用磁盘配额功能
+5	测试 
+		
+
+示例：
+
+在/dev/vdb2分区上配置磁盘配额，针对martin用户最多允许其存在200M数据 
+
+1） 安装quota软件 
+
+[root@disk ~]# yum install -y quota
+
+2）配置/dev/vdb2分区支持磁盘配额功能 
+
+[root@disk ~]# vim /etc/fstab 
+/dev/vdb2               /oracle                 ext4    defaults,usrquota,grpquota      0 0
+[root@disk ~]# mount -o remount /dev/vdb2 			>>>重新挂载/dev/vdb2
+[root@disk ~]# mount
+/dev/vda2 on / type ext4 (rw)
+proc on /proc type proc (rw)
+sysfs on /sys type sysfs (rw)
+devpts on /dev/pts type devpts (rw,gid=5,mode=620)
+tmpfs on /dev/shm type tmpfs (rw)
+/dev/vda1 on /boot type ext4 (rw)
+/dev/vdb1 on /uplooking type ext4 (rw)
+/dev/vdb2 on /oracle type ext4 (rw,usrquota,grpquota)			>>>能看到usrquota,grpquota表示成功
+/dev/vdb5 on /mysql type ext4 (rw)
+/dev/vdb6 on /redis type ext4 (rw)
+none on /proc/sys/fs/binfmt_misc type binfmt_misc (rw)
+[root@disk ~]# 
+
+3） 在分区挂载点下创建磁盘配额配置文件 
+
+[root@disk ~]# quotacheck -cugv /oracle/ 
+[root@disk ~]# ls /oracle/
+aquota.group  aquota.user  lost+found
+[root@disk ~]# 
+
+4） 编辑配置文件 
+
+[root@disk ~]# useradd martin
+[root@disk ~]# passwd martin
+
+[root@disk ~]# edquota -u martin
+Disk quotas for user martin (uid 500):
+  Filesystem                   blocks       soft       hard     inodes     soft     hard
+  /dev/vdb2                         0          0       204800          0        0        0 
+
+
+5） 启用磁盘配额功能，并测试 
+
+[root@disk ~]# quotaon -ugv /oracle/
+/dev/vdb2 [/oracle]: group quotas turned on
+/dev/vdb2 [/oracle]: user quotas turned on
+[root@disk ~]# 
+
+测试： 
+
+[root@disk ~]# chmod o+w /oracle/
+[root@disk ~]# su - martin
+[martin@disk ~]$ 
+[martin@disk ~]$ dd if=/dev/zero of=/oracle/aa.mp3 bs=1M count=300
+vdb2: write failed, user block limit reached.
+dd: writing `/oracle/aa.mp3': Disk quota exceeded
+201+0 records in
+200+0 records out
+209715200 bytes (210 MB) copied, 2.36961 s, 88.5 MB/s
+[martin@disk ~]$ 
+[martin@disk ~]$ ls -lh /oracle/
+total 201M
+-rw-rw-r-- 1 martin martin 200M Nov  5 15:12 aa.mp3
+-rw------- 1 root   root   7.0K Nov  5 15:12 aquota.group
+-rw------- 1 root   root   7.0K Nov  5 15:09 aquota.user
+drwx------ 2 root   root    16K Nov  5 11:18 lost+found
+[martin@disk ~]$ 
+
+
+解释
+	dd if=/dev/zero of=/oracle/aa.mp3 bs=1M count=300
+
+		if=/dev/zero			指定源文件 
+		of=/oracle/aa.mp3	指定目标文件
+		bs=1M					数据块大小 
+		count=300				次数
+
+
+查看磁盘配额使用情况
+
+[root@disk ~]# repquota -ugv /oracle/
+*** Report for user quotas on device /dev/vdb2
+Block grace time: 7days; Inode grace time: 7days
+                        Block limits                File limits
+User            used    soft    hard  grace    used  soft  hard  grace
+----------------------------------------------------------------------
+root      --      20       0       0              2     0     0       
+martin    --  204800       0  204800              1     0     0       
+
+Statistics:
+Total blocks: 7
+Data blocks: 1
+Entries: 2
+Used average: 2.000000
+
+*** Report for group quotas on device /dev/vdb2
+Block grace time: 7days; Inode grace time: 7days
+                        Block limits                File limits
+Group           used    soft    hard  grace    used  soft  hard  grace
+----------------------------------------------------------------------
+root      --      20       0       0              2     0     0       
+martin    --  204800       0       0              1     0     0       
+
+Statistics:
+Total blocks: 7
+Data blocks: 1
+Entries: 2
+Used average: 2.000000
+
+[root@disk ~]# 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

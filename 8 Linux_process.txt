@@ -1,0 +1,439 @@
+Linux进程管理及计划任务 
+
+
+进程管理 
+
+进程	Process 
+
+	某应用程序打开的进程 
+	PID		Process ID
+
+
+静态查看进程的状态
+
+# ps 
+
+[root@localhost ~]# ps						>>>>查看本终端的进程 
+  PID TTY          TIME CMD
+ 4206 pts/0    00:00:00 bash
+ 4378 pts/0    00:00:00 ps
+
+
+选项的使用方式：
+	BSD风格：选项没有横线-			 ps aux
+	SysV风格：选项需要带有横线-  	 ps -elf
+
+
+BSD风格： 
+
+	
+	a	显示与终端相关的进程
+	u	显示启动进程的用户
+	x	显示与终端无关的进程
+	
+root@localhost ~]# ps a
+  PID TTY      STAT   TIME COMMAND
+ 3303 tty2     Ss+    0:00 /sbin/mingetty /dev/tty2
+ 3305 tty3     Ss+    0:00 /sbin/mingetty /dev/tty3
+
+
+[root@localhost ~]# ps u
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root      3303  0.0  0.0   4064   544 tty2     Ss+  09:06   0:00 /sbin/mingetty /dev/tty2
+root      3305  0.0  0.0   4064   544 tty3     Ss+  09:06   0:00 /sbin/mingetty /dev/tty30:00 /bin/bash
+oracle    4090  0.0  0.0 108340  1816 pts/1    Ss   09:20   0:00 /bin/bash
+oracle    4151  0.0  0.0 110232  1120 pts/1    R+   09:23   0:00 ps u
+[oracle@oracle 桌面]$ 
+
+
+	USER	运行进程的用户 
+	%CPU	进程所占用的CPU百分比
+	%MEM	进程所战胜的MEM百分比
+	VSZ		虚拟内存集，进程独有的内存＋共享存在
+	RSS		进程独有的内存 
+
+STAT	进程的状态
+
+	D：不可中断的睡眠 (等待磁盘IO完成)
+	S：可中断的睡眠(不需要等待磁盘IO完成） 
+	R：运行或就绪
+	T：停止
+	Z：僵死		Zombie
+	
+	<：高优先级进程 
+		会被CPU优先执行
+		会获取更多的CPU执行时间
+		
+	N：低优先级进程 
+	+：前台进程组中的进程 
+	l：多线程进程(Thread)
+	s：会话进程首进程，某一个连接的父进程 
+
+
+[root@localhost ~]# ps aux | less 
+USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root         1  0.0  0.0  19364  1536 ?        Ss   09:05   0:00 /sbin/init
+root         2  0.0  0.0      0     0 ?        S    09:05   0:00 [kthreadd]
+root         3  0.0  0.0      0     0 ?        S    09:05   0:00 [migration/0]
+root         4  0.0  0.0      0     0 ?        S    09:05   0:00 [ksoftirqd/0]
+
+	带有方括号为系统进行(Linux内核启动)
+	无方括号的(用户进程)
+	
+
+[root@localhost ~]# ps aux | grep vim
+root      5550  0.2  0.0 143972  3760 pts/2    S+   10:25   0:00 vim /etc/fstab
+root      5564  0.0  0.0 103260   860 pts/0    S+   10:25   0:00 grep --color vim
+
+
+SysV风格选项：
+
+	-e	显示所有进程 	
+	-l 	详细信息
+	-f 	以长格式显示(更多字段内容)
+
+
+[root@localhost ~]# ps -elf | less
+
+F S UID        PID  PPID  C PRI  NI ADDR SZ WCHAN  STIME TTY          TIME CMD
+4 S root         1     0  0  80   0 -  4841 poll_s 09:05 ?        00:00:00 /sbin/init
+1 S root         2     0  0  80   0 -     0 kthrea 09:05 ?        00:00:00 [kthreadd]
+1 S root         3     2  0 -40   - -     0 migrat 09:05 ?        00:00:00 [migration/0]
+1 S root         4     2  0  80   0 -     0 ksofti 09:05 ?        00:00:00 [ksoftirqd/0]
+1 S root         5     2  0 -40   - -     0 cpu_st 09:05 ?        00:00:00 [stopper/0]
+5 S root         6     2  0 -40   - -     0 watchd 09:05 ?        00:00:00 [watchdog/0]
+1 S root         7     2  0 -40   - -     0 migrat 09:05 ?        00:00:00 [migration/1]
+
+进程优先级：
+
+	0----139
+	
+	数据越小，越先级越高 
+
+高优先级进程：
+	获取CPU更多的执行时间
+	会被CPU优先执行
+
+nice值：
+
+	新优先级＝＝＝旧优先级＋NICE值
+
+	-20----19 
+	
+	普通用户仅能够调大nice值，即降低进程优先级
+	root用户可随意调整nice值
+	
+
+显示进程树 
+
+[root@localhost ~]# pstree
+init─┬─abrtd
+     ├─acpid
+     ├─atd
+     ├─auditd───{auditd}
+     ├─automount───4*[{automount}]
+     ├─bonobo-activati───{bonobo-activat}
+     ├─certmonger
+     ├─clock-applet
+     ├─console-kit-dae───63*[{console-kit-da}]
+     ├─crond
+
+
+显示进程PID  
+
+[root@localhost ~]# pidof vim
+5696
+[root@localhost ~]# 
+
+
+
+动态查看进程的状态 
+
+# top 
+
+top - 10:53:46 up  1:48,  3 users,  load average: 0.12, 0.19, 0.16
+Tasks: 239 total,   2 running, 237 sleeping,   0 stopped,   0 zombie
+Cpu(s):  7.6%us,  1.6%sy,  0.0%ni, 90.6%id,  0.0%wa,  0.0%hi,  0.2%si,  0.0%st
+Mem:  16084568k total,  2529012k used, 13555556k free,    70044k buffers
+Swap:  8388604k total,        0k used,  8388604k free,   626388k cached
+
+	 7.6%us	用户进程占用的CPU
+	 1.6%sy  	系统进程占用的CPU
+	 0.0%ni	调整过优先级的进程占用的CPU
+	 90.6%id	CPU空闲
+	 0.0%wa	等待磁盘IO的进程所占用的CPU
+	
+Cpu(s)：显示所有CPU平均比，按1可显示每颗CPU的使用情况
+
+
+top交互式指令 ：
+
+	M：按内存使用排序
+	P：按CPU使用排序
+	T：按运行时间排序 
+	
+	l：是否显示TOP第1行信息
+	m：是否显示内存使用信息
+	t：是否显示CPU及任务信息
+
+	c：是否显示完整的命令行
+	q：退出TOP
+
+
+显示当前时刻CPU的使用情况
+
+[root@localhost ~]# uptime 
+ 11:00:25 up  1:54,  3 users,  load average: 0.39, 0.26, 0.19
+
+
+top选项：
+
+	-d 1：指定top信息刷新的频率
+	-b：以批模式显示进程信息
+	-n 2：共显示两批信息 
+
+# top -d 1 -b -n 2 
+
+
+
+
+进程控制
+
+	信号：Signal
+
+
+查看所有信号 
+
+[root@localhost ~]# kill -l
+ 1) SIGHUP	 2) SIGINT	 3) SIGQUIT	 4) SIGILL	 5) SIGTRAP
+ 6) SIGABRT	 7) SIGBUS	 8) SIGFPE	 9) SIGKILL	10) SIGUSR1
+11) SIGSEGV	12) SIGUSR2	13) SIGPIPE	14) SIGALRM	15) SIGTERM
+16) SIGSTKFLT	17) SIGCHLD	18) SIGCONT	19) SIGSTOP	20) SIGTSTP
+21) SIGTTIN	22) SIGTTOU	23) SIGURG	24) SIGXCPU	25) SIGXFSZ
+26) SIGVTALRM	27) SIGPROF	28) SIGWINCH	29) SIGIO	30) SIGPWR
+31) SIGSYS	34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
+38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
+43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
+48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
+53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
+58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
+63) SIGRTMAX-1	64) SIGRTMAX	
+
+
+常用信号：
+	1  SIGHUP：让一个进程不用重启，就可以重读其配置文件，并让新配置生效    # service <服务名称> reload
+	2  SIGINT：硬件中断信号，ctrl+c 
+	9  SIGKILL：杀死一个进程
+	15 SIGTERM：终止一个进程
+
+如何调用一个信号？
+
+	信号号码：kill -9 <PID>
+	信号名称：kill -SIGKILL <PID>
+	信号名称简写：kill -KILL <PID>
+
+# kill <PID> 
+# killall <PROCESS_NAME>
+
+
+
+控制进程的运行方式(前台/后台)
+
+	前台： 占用命令提示符 
+
+1)　控制命令在后台运行 
+
+# command & 
+
+[root@localhost ~]# dd if=/dev/zero of=/tmp/1.jpg bs=1M count=8000000 & 
+
+
+2) 查看后台的应用程序 
+
+[root@localhost ~]# jobs -l
+[1]+ 11019 Running                 dd if=/dev/zero of=/tmp/1.jpg bs=1M count=8000000 &
+
+
+3)　将正在运行的指令放入后台，并暂停运行 
+
+	ctrl+z 
+
+4) 将后台的程序调回前台继续运行 
+
+# fg <后台任务编号>
+
+[root@localhost ~]# fg 1
+
+
+5） 将后台暂停的程序继续在后台运行 
+
+# bg <后台任务编号>
+
+[root@localhost ~]# bg 2
+
+
+
+
+计划任务 
+
+类型：
+	一次性计划任务
+	周期性计划任务
+
+一次性计划任务 
+
+前提： atd服务必须运行 
+
+[root@localhost ~]# service atd status
+atd (pid  2917) is running...
+
+
+制订一次性计划任务 
+
+# at <TIME>
+
+[root@localhost ~]# at 15:30
+at> poweroff
+at> <EOT>
+job 1 at 2016-11-20 15:30
+
+
+[root@localhost ~]# at now + 1 minute
+at> mkdir /tmp/aaaa
+at> <EOT>
+job 2 at 2016-11-20 13:16
+
+
+周期性计划任务 
+
+前提： crond服务必须运行 
+
+[root@localhost ~]# service crond status
+crond (pid  2903) is running...
+
+制订周期性计划任务 
+
+# crontab -e 
+
+    时间            COMMAND命令 
+
+
+时间：
+    分  时  日   月   周 
+
+    分钟：0----59 
+    时：  0----23
+    日期：1----31
+    月：  1----12
+    周：  0----6
+
+示例：
+
+每天晚上11：30      30  23 * * * 
+每天零点            0 0 * * * 
+
+每周五下午4点       0 16 * * 5 
+
+-   连续的时间      5 8-14 * * * 
+
+不连续的时间        5 8,10,12 * * * 
+
+每5分钟             */5 * * * * 
+
+
+COMMAND命令：
+    1   建议写命令的完整路径 /bin/mkdir /abc
+    2   只能写一条命令(shell脚本)
+
+
+示例： 每分钟在/tmp目录创建文件 
+
+[root@localhost ~]# crontab -e
+*/1 * * * *	/bin/touch /tmp/`date +\%F-\%T`.txt
+[root@localhost ~]# 
+
+注意：
+	写命令时%在周期性计划任务中是结束的意思，因此在使用%时，需要加\右斜杠转义 
+
+
+查看周期性计划任务 
+
+[root@localhost ~]# crontab -l
+*/1 * * * *	/bin/touch /tmp/`date +\%F-\%T`.txt
+[root@localhost ~]# 
+
+
+删除周期性计划任务
+
+# crontab -r 			>>> 会删除所有计划任务
+
+
+
+
+============================================================================================================
+
+软件安装包：
+
+	rpm软件(rpm, yum)
+	源码软件(*.tar.gz, *.tar.bz2)
+
+安装源码软件 
+
+	步骤： 
+
+		解压缩
+		配置软件的功能选项和参数			--------> MakeFile
+		编译(转换成计算机可识别二进制程序)
+		安装
+
+	前提： gcc编译环境 										
+
+
+示例： 
+
+安装htop软件 
+
+# tar zxf htop-1.0.3.tar.gz
+# cd htop-1.0.3
+# ./configure --prefix=/usr/local/htop  
+# make
+# make install 
+
+查看软件功能参数：
+
+# ./configure --help | less 
+
+
+
+方便执行源码软件的命令：
+
+修改环境变量PATH的值 
+
+方法1：
+
+# vim /etc/profile 
+export PATH=$PATH:/usr/local/htop/bin
+# source /etc/profile 
+
+
+方法2： 在/etc/profile.d目录下创建独立的文件 
+
+[root@test profile.d]# vim /etc/profile.d/htop.sh
+export PATH=$PATH:/usr/local/htop/bin
+[root@test profile.d]# source /etc/profile.d/htop.sh
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	

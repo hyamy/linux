@@ -1,0 +1,407 @@
+Linux文件共享服务  
+
+	vsftpd软件	FTP协议
+	samba软件	SMB协议
+	nfs网络文件系统 
+
+
+samba软件
+	
+	作用：将Linux文件共享 
+	软件：samba, samba-client
+	配置文件：/etc/samba/smb.conf
+	服务：smb 
+	端口：139/tcp, 445/tcp 
+	
+	
+配置文件------/etc/samba/smb.conf	
+
+
+1、 全局配置 
+
+    workgroup = MYGROUP							>>>>指定samba服务器所在的工作组名称 
+    server string = Samba Server Version %v		>>>>指定服务器的描述信息, %v  内置变量
+	
+	hosts allow = 192.168.87.102/24 192.168.1.			>>>仅允许哪些主机访问samba服务
+	hosts deny = 172.16.1.1/24							>>>明确的禁止某个IP访问
+	
+	security = {share|user}										>>>设置samba共享的访问方式
+	
+		share: 匿名访问
+		user: 用户认证的访问 
+
+2、共享目录的设置 
+
+;       [public]								>>>> 目录的共享名
+;       comment = Public Stuff					>>>> 指定共享目录的描述信息
+;       path = /home/samba						>>>> 指定共享的目录名称
+;       public = yes							>>>> 是否所有用户都可以访问 
+;		browseable = yes 						>>>> 是否可浏览
+;       writable = yes							>>>> 是否可写
+;		write list = userA, userB				>>>> 允许哪些用户可上传文件  
+
+
+
+示例1：
+
+将服务器本地的/caiwu目录共享， 设置其共享名为caiwu；要求客户端在访问时需要通过认证，用户名为martin, 密码为redhat，仅允许客户端可下载文件  
+
+samba服务器配置：
+
+1) 关闭SELinux及iptables防火墙
+
+[root@samba ~]# getenforce 
+Disabled
+
+[root@samba ~]# service iptables stop
+[root@samba ~]# chkconfig iptables off
+
+
+2) 安装samba相关的软件  
+
+[root@samba ~]# yum install -y samba samba-client
+
+[root@samba ~]# mkdir /caiwu
+[root@samba ~]# touch /caiwu/{1..10}.txt
+
+
+3) 编辑smb.conf配置文件，实现目录共享  
+
+[root@samba ~]# cp /etc/samba/smb.conf /etc/samba/smb.conf.bak
+[root@samba ~]# vim /etc/samba/smb.conf
+
+	workgroup = STAFF
+	server string = Samba Server Version
+
+	security = user
+
+    [caiwu]
+    comment = This is Caiwu Folder
+    path = /caiwu
+    browseable = yes
+
+
+4) 创建samba共享用户
+
+[root@samba ~]# useradd martin
+[root@samba ~]# smbpasswd -a martin
+New SMB password:
+Retype new SMB password:
+Added user martin.
+
+[root@samba ~]# pdbedit -L				>>>>查看samba共享用户
+martin:500:
+[root@samba ~]#  
+
+
+5) 启动smb服务，并设置开机自启动 
+
+[root@samba ~]# service smb start
+启动 SMB 服务：                                            [确定]
+[root@samba ~]# chkconfig smb on
+[root@samba ~]# chkconfig --list smb
+smb            	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+[root@samba ~]# netstat -antp | grep -e 139 -e 445
+tcp        0      0 0.0.0.0:47765               0.0.0.0:*                   LISTEN      1139/rpc.statd      
+tcp        0      0 0.0.0.0:445                 0.0.0.0:*                   LISTEN      2100/smbd           
+tcp        0      0 0.0.0.0:139                 0.0.0.0:*                   LISTEN      2100/smbd    
+
+
+
+客户端测试访问：
+
+1) windows xp测试访问 
+
+	\\192.168.87.101 
+	
+	映射网络驱动器....
+	
+	
+2) Linux客户端  
+
+[root@localhost ~]# yum install -y samba-client
+
+[root@localhost ~]# smbclient  //192.168.87.101/caiwu -U martin
+Enter martin's password: 
+Domain=[STAFF] OS=[Unix] Server=[Samba 3.6.23-12.el6]
+smb: \> ls
+  .                                   D        0  Sat Dec 17 18:17:27 2016
+  ..                                 DR        0  Sat Dec 17 18:17:21 2016
+  7.txt                                        0  Sat Dec 17 18:17:27 2016
+  9.txt                                        0  Sat Dec 17 18:17:27 2016
+  8.txt                                        0  Sat Dec 17 18:17:27 2016
+  4.txt                                        0  Sat Dec 17 18:17:27 2016
+  3.txt                                        0  Sat Dec 17 18:17:27 2016
+  10.txt                                       0  Sat Dec 17 18:17:27 2016
+  1.txt                                        0  Sat Dec 17 18:17:27 2016
+  5.txt                                        0  Sat Dec 17 18:17:27 2016
+  6.txt                                        0  Sat Dec 17 18:17:27 2016
+  2.txt                                        0  Sat Dec 17 18:17:27 2016
+
+		39145 blocks of size 2097152. 35664 blocks available
+smb: \> 
+smb: \> get 5.txt 
+getting file \5.txt of size 0 as 5.txt (0.0 KiloBytes/sec) (average 0.0 KiloBytes/sec)
+smb: \> exit
+	
+
+
+取消用户家目录的共享 
+
+编辑smb配置文件，注释如下内容：
+
+# vim /etc/samba/smb.conf  
+
+;[homes]
+;       comment = Home Directories
+;       browseable = no
+;       writable = yes
+
+# service smb restart
+
+
+
+允许martin用户可上传文件  
+
+1) 在smb.conf添加caiwu目录的上传权限  
+
+# vim /etc/samba/smb.conf  
+
+	[caiwu]
+	....
+	writable = yes 
+	
+# service smb restart 
+
+2) 设置/caiwu目录本地的权限 
+
+[root@samba ~]# setfacl -m u:martin:rwx /caiwu/
+
+[root@samba ~]# getfacl /caiwu/
+getfacl: Removing leading '/' from absolute path names
+# file: caiwu/
+# owner: root
+# group: root
+user::rwx
+user:martin:rwx
+group::r-x
+mask::rwx
+other::r-x
+
+
+
+示例2： 
+
+将服务器本地的/shichang目录共享，要求martin用户可上传、下载文件，jerry用户可下载文件  
+
+samba服务器配置：
+
+[root@samba ~]# mkdir /shichang
+[root@samba ~]# touch /shichang/{1..10}.doc
+
+1) 添加jerry共享用户 
+
+[root@samba ~]# useradd jerry
+[root@samba ~]# smbpasswd -a jerry
+New SMB password:
+Retype new SMB password:
+Added user jerry.
+[root@samba ~]# 
+[root@samba ~]# pdbedit -L
+martin:500:
+jerry:501:
+
+2) 编辑smb配置文件，添加关于目录shichang的共享 
+
+# vim /etc/samba/smb.conf  
+
+    [shichang]
+    comment = This is ShiChang Folder
+    path = /shichang
+    browseable = yes
+    write list = martin
+	
+[root@samba ~]# service smb restart
+关闭 SMB 服务：                                            [确定]
+启动 SMB 服务：                                            [确定]
+[root@samba ~]# 
+
+
+3) 设置/shichang目录的本地权限，保证martin用户拥有写入权限
+
+[root@samba ~]# chown martin /shichang/
+[root@samba ~]# ls -ldh /shichang/
+drwxr-xr-x 2 martin root 4.0K 12月 17 19:21 /shichang/
+[root@samba ~]# 
+
+测试访问：
+
+windows系统中清除共享缓存 ：
+
+	net use * /del 
+	
+	
+
+
+
+
+
+nfs------network file system 网络文件系统 
+
+	作用：在Linux系统间实现文件共享， 共享存储
+	软件：nfs-utils, rpcbind
+	
+		[root@samba ~]# rpm -q nfs-utils
+		nfs-utils-1.2.3-54.el6.x86_64
+	
+		[root@samba ~]# rpm -q rpcbind
+		rpcbind-0.2.0-11.el6.x86_64
+
+	配置文件(目录导出文件)：/etc/exports 
+	
+
+目录导出文件-----/etc/exports 
+
+格式：
+
+	目录名称		客户端地址(权限)  客户端地址(权限)
+
+客户端地址：
+	单个IP地址 		192.168.1.1 
+	网段			192.168.1.0/24
+	主机名			client.linux.com 
+	域名			linux.com 
+	所有			*
+	
+
+权限:
+
+	ro		只读 
+	rw		读写
+	sync	同步
+	async	异步
+	
+	
+	
+示例：
+
+将/webdata目录通过NFS导出，允许客户端192.168.87.102挂载使用 
+
+nfs服务器配置：
+
+1) 确保nfs相关的软件已经安装  
+
+[root@nfs ~]# rpm -q nfs-utils
+nfs-utils-1.2.3-54.el6.x86_64
+
+[root@nfs ~]# rpm -q rpcbind
+rpcbind-0.2.0-11.el6.x86_64
+
+[root@nfs ~]# mkdir /webdata
+[root@nfs ~]# touch /webdata/{1..10}.html
+
+
+2) 编辑exports文件，导出/webdata目录 
+
+[root@nfs ~]# cat /etc/exports
+
+	/webdata	192.168.87.102(ro)
+	
+3) 启动nfs服务 
+
+[root@nfs ~]# service nfs start
+启动 NFS 服务：                                            [确定]
+关掉 NFS 配额：                                            [确定]
+启动 NFS mountd：                                          [确定]
+启动 NFS 守护进程：                                        [确定]
+正在启动 RPC idmapd：                                      [确定]
+
+[root@nfs ~]# chkconfig --list nfs
+nfs            	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+
+[root@nfs ~]# chkconfig --list rpcbind
+rpcbind        	0:关闭	1:关闭	2:启用	3:启用	4:启用	5:启用	6:关闭
+	
+查看NFS导出的目录
+
+[root@nfs ~]# exportfs -rv
+exporting 192.168.87.102:/webdata
+
+[root@nfs ~]# showmount -e localhost
+Export list for localhost:
+/webdata 192.168.87.102
+	
+	
+客户端挂载NFS目录：
+
+[root@localhost ~]# mkdir /web/htdocs -pv
+
+[root@localhost ~]# vim /etc/fstab 
+192.168.87.101:/webdata         /web/htdocs     nfs     defaults        0 0
+[root@localhost ~]# mount -a
+
+[root@localhost ~]# ls /web/htdocs/
+10.html  1.html  2.html  3.html  4.html  5.html  6.html  7.html  8.html  9.html
+
+	
+	
+	
+示例2：
+
+将/mysqldata目录以读写方式导出，允许192.168.87.102挂载使用 
+
+[root@nfs ~]# vim /etc/exports 
+/webdata	192.168.87.102(ro)
+/mysqldata	192.168.87.102(rw)
+
+[root@nfs ~]# exportfs -rv
+exporting 192.168.87.102:/mysqldata
+exporting 192.168.87.102:/webdata
+
+[root@nfs ~]# chmod o+w /mysqldata/
+
+
+
+
+权限：
+
+1) all_squash	
+
+	客户端上传的所有文件的所属会被映射为nfsnobody用户 
+		
+2) root_squash
+	
+	客户端以root用户上传的文件的所属会被映射为nfsnobody用户, 默认选项
+	
+3) no_root_squash
+
+	客户端以root用户上传的文件的所属仍为root用户
+
+4)
+	anonuid=
+	anongid=
+	
+	用于指定匿名用户的uid和gid
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

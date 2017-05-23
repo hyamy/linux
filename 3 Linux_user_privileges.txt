@@ -1,0 +1,177 @@
+用户权限管理 
+
+用户管理
+
+	多用户多任务的操作系统
+
+	用户		用户组					用户userA -------- 用户组userA
+
+	uid		gid
+
+	用户类型：
+		管理员	root
+		普通用户
+			程序用户/系统用户 
+
+	用户组类型：
+		基本组		一个
+		附加组		多个
+		
+
+	userA用户 －－－－－－－－   userA用户组 
+		caiwu
+		shichang
+		jishu
+
+
+用户相关的文件：
+
+	/etc/passwd		用户信息
+		格式：
+			用户名：X：UID：GID：COMMENT：宿主目录：SHELL
+
+				SHELL：
+					/bin/bash			默认
+					/sbin/nologin	程序用户/系统用户 
+
+	/etc/shadow		用户密码信息
+
+
+
+用户相关的操作
+
+1	创建用户 
+
+# useradd [option] USER
+byh
+
+option选项：
+
+	-u	NUMBER			指定用户的uid
+	-g	gid/GROUP		指定用户的基本组
+	-G gid/GROUP		指定用户的附加组
+	-d	DIRECTORY		指定用户的宿主目录			/home/userA
+	-e	YYYY-MM-DD	指定用户的过期时间
+	-c	COMMENT		指定用户的说明信息
+	-M					不创建用户的宿主目录
+	-s SHELL			指定用户的SHELL程序
+
+
+2	切换用户
+
+# su - USER
+
+[root@node1 ~]# su - martin 
+
+
+3	设置用户密码 
+
+# passwd [option] [user]
+
+[root@node1 ~]# passwd 
+更改用户 root 的密码 。
+新的 密码：
+无效的密码： 它基于字典单词
+重新输入新的 密码：
+passwd： 所有的身份验证令牌已经成功更新。
+
+[root@node1 ~]# passwd martin
+更改用户 martin 的密码 。
+新的 密码：
+无效的密码： 它基于字典单词
+无效的密码： 过于简单
+重新输入新的 密码：
+passwd： 所有的身份验证令牌已经成功更新。
+
+
+option选项：
+
+-S		查看用户密码状态
+[root@node1 ~]# passwd -S martin
+martin PS 2016-10-22 0 99999 7 -1 (密码已设置，使用 SHA512 加密。)
+
+-l		锁定用户密码
+[root@node1 ~]# passwd -l martin
+锁定用户 martin 的密码 。
+passwd: 操作成功
+[root@node1 ~]# passwd -S martin
+martin LK 2016-10-22 0 99999 7 -1 (密码已被锁定。)
+
+
+-u		解锁用户密码
+
+[root@node1 ~]# passwd -u martin
+解锁用户 martin 的密码 。
+passwd: 操作成功
+[root@node1 ~]# passwd -S martin
+martin PS 2016-10-22 0 99999 7 -1 (密码已设置，使用 SHA512 加密。)
+
+
+-e		强制用户密码过期 
+
+[root@node1 ~]# passwd -e martin
+Expiring password for user martin.
+passwd: 操作成功
+
+
+4	修改用户的属性 
+
+# usermod	[option] USER 
+
+	-u UID
+	-g	gid/group
+	-G gid/group			修改用户的附加组
+		[root@node1 ~]# usermod -G shichang martin
+		[root@node1 ~]# id martin
+		uid=500(martin) gid=500(martin) 组=500(martin),10004(shichang)	
+		[root@node1 ~]# 
+
+		[root@node1 ~]# usermod -aG shichang martin
+		[root@node1 ~]# id martin
+		uid=500(martin) gid=500(martin) 组=500(martin),10001(jishu),10004(shichang)
+	-s SHELL
+	-d	DIRECTORY 
+	-L			锁定用户密码 
+	-U			解锁用户密码
+
+
+5	删除用户
+
+# userdel [option] USER 
+
+[root@node1 ~]# userdel userA
+
+option选项：
+
+	-r		同时删除宿主目录 
+
+[root@node1 ~]# userdel -r martin
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,394 @@
+15天 		Linux系统管理+Linux SHELL脚本编写 
+
+
+用户名： root 密码：uplooking 
+
+KVM虚拟机：
+
+[root@localhost ~]# wget -O /usr/local/sbin/kvm-manager ftp://172.16.8.100/kvm-manager-centos 
+[root@localhost ~]# chmod a+x /usr/local/sbin/kvm-manager 
+[root@localhost ~]# kvm-manager				>>>运行虚拟机管理脚本 
+
+
+
+Linux系统管理 
+
+	文件目录管理 
+	用户权限管理
+	软件管理
+	磁盘管理 
+	网络管理
+	进程服务管理 
+
+
+Linux	
+
+	更适用于服务器 
+
+	优势：
+		开源(OPEN SOURCE)特性
+		最大化发挥硬件性能(CPU, 内存)
+
+
+Linux组成结构：
+
+	内核(kernel)+外部程序 		https://www.kernel.org/
+
+		
+Linux发行版本  Release
+
+	RHEL, CentOS, Fedora
+	SUSE, Slorias, Ubuntu
+
+
+Linux目录结构：
+
+
+	/		根目录
+
+		/bin, /sbin, /usr/bin, /usr/sbin, /usr/local/bin, /usr/local/sbin		可执行程序，命令
+
+		/boot		启动分区
+		
+		/dev		device设备文件(硬盘， 磁盘分区， 光盘， U盘)
+
+		/etc		各应用程序的配置文件
+
+		/home		普通用户的宿主目录/家目录 
+				userA-------/home/userA
+
+		/root		root管理员的宿主目录/家目录 
+
+
+命令提示符：
+
+[root@localhost ~]# 
+		
+	root	 登录系统的用户名
+	localhost	计算机名称			
+	#	当前用户的身份为管理员root			$	普通用户身份 
+	~	 当前目录名称 
+		~	当前用户的宿主目录 
+
+
+命令：
+
+命令关键字		选项	参数
+			
+					
+1	查看系统的内核版本 
+[root@localhost ~]# uname -r
+2.6.32-504.el6.x86_64
+
+[root@localhost ~]# uname -a
+Linux localhost.localdomain 2.6.32-504.el6.x86_64 #1 SMP Wed Oct 15 04:27:16 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
+
+
+2	查看系统发行版本 
+
+[root@localhost ~]# cat /etc/issue
+CentOS release 6.6 (Final)
+Kernel \r on an \m
+
+
+
+3	查看计算机名称
+
+[root@localhost ~]# uname -n
+localhost.localdomain
+
+[root@localhost ~]# hostname 
+localhost.localdomain
+
+
+4	修改计算机名称 
+
+[root@localhost ~]# hostname oracle.linux.com					>>>临时生效
+[root@localhost ~]# hostname 
+oracle.linux.com
+
+
+
+5	显示日期时间 
+
+[root@localhost ~]# date
+2016年 10月 15日 星期六 11:10:21 CST
+
+[root@localhost ~]# date +%F
+2016-10-15
+[root@localhost ~]# date +%T
+11:09:24
+[root@localhost ~]# date +%F-%T
+2016-10-15-11:09:55
+
+
+6	查看命令的帮助文档 
+
+# man COMMAND
+
+
+
+Linux文件目录管理 
+
+
+1	查看当前目录名称 
+
+[root@localhost ~]# pwd
+/root
+
+
+2	切换目录 
+
+# cd DIRECTORY
+
+[root@localhost ~]# cd /etc/sysconfig/
+[root@localhost sysconfig]# pwd
+/etc/sysconfig
+[root@localhost sysconfig]# cd ..
+[root@localhost etc]# pwd
+/etc
+[root@localhost etc]# cd 
+[root@localhost ~]# pwd
+/root
+
+[root@localhost sysconfig]# pwd
+/etc/sysconfig
+[root@localhost sysconfig]# cd ../modprobe.d/
+[root@localhost modprobe.d]# pwd
+/etc/modprobe.d
+
+[root@localhost ~]# cd ~test					>>>切换到test用户宿主目录
+[root@localhost test]# pwd
+/home/test
+[root@localhost test]# 
+
+
+3	查看目录下的文件 
+
+# ls [option] [DIRECTORY|FILE]
+
+[root@localhost ~]# ls
+anaconda-ks.cfg  install.log.syslog  模板  图片  下载  桌面
+install.log      公共的              视频  文档  音乐
+
+
+[root@localhost ~]# ls /tmp/
+gedit.root.2444279922  orbit-gdm   pulse-TRKHpdaooZ3W  virtual-root.s3QNVG
+keyring-7wsZu0         orbit-root  pulse-ZP0sPq0fOUE5
+
+
+option选项
+
+-F		所有目录名称后会带有/
+
+[root@localhost ~]# ls -F
+anaconda-ks.cfg  install.log.syslog  模板/  图片/  下载/  桌面/
+install.log      公共的/             视频/  文档/  音乐/
+
+
+-a		查看隐藏文件(以点开头文件)
+
+[root@localhost ~]# ls -a
+.                .cache     .gnome2_private  .imsettings.log     .pulse-cookie  图片
+..               .config    .gnote           install.log         .ssh           文档
+.abrt            .cshrc     .gnupg           install.log.syslog  .tcshrc        下载
+
+
+-R 	层次显示目录下的文件 
+
+[root@localhost ~]# ls -R
+.:
+anaconda-ks.cfg  install.log.syslog  模板  图片  下载  桌面
+install.log      公共的              视频  文档  音乐
+
+./公共的:
+
+./模板:
+
+./视频:
+
+
+-l		以详细信息的方式列出文件 
+
+[root@localhost ~]# ls -l 
+总用量 112
+-rw-------. 1 root root  1845 9月  27 00:54 anaconda-ks.cfg
+
+	第1个字符：
+		-		文件
+		d		目录
+		b		块设备文件（硬盘，分区，光盘，U盘）
+		c		字符设备文件（显示器， 键鼠）
+		l		软链接文件(快捷方式)
+		
+
+-h		带有可读性的单位K，M，G
+
+[root@localhost ~]# ls -lh 
+总用量 112K
+-rw-------. 1 root root 1.9K 9月  27 00:54 anaconda-ks.cfg
+-rw-r--r--. 1 root root  58K 9月  27 00:54 install.log
+-rw-r--r--. 1 root root  11K 9月  27 00:51 install.log.syslog
+
+示例：
+
+查看/etc/passwd文件权限 
+
+[root@localhost ~]# ls -lh /etc/passwd
+-rw-r--r--. 1 root root 1.9K 10月 15 11:52 /etc/passwd
+[root@localhost ~]# 
+
+
+-d		显示目录的属性信息
+
+[root@localhost ~]# ls -ldh /etc/
+drwxr-xr-x. 125 root root 12K 10月 15 11:52 /etc/
+
+
+-t		按文件修改时间降序排列 
+
+[root@localhost ~]# ls -lt
+总用量 112
+drwxr-xr-x. 2 root root  4096 10月 15 2016 桌面
+drwxr-xr-x. 2 root root  4096 9月  27 00:56 公共的
+drwxr-xr-x. 2 root root  4096 9月  27 00:56 模板
+
+
+-S		按文件大小降序排列 
+
+[root@localhost ~]# ls -lhS
+总用量 112K
+-rw-r--r--. 1 root root  58K 9月  27 00:54 install.log
+-rw-r--r--. 1 root root  11K 9月  27 00:51 install.log.syslog
+drwxr-xr-x. 2 root root 4.0K 9月  27 00:56 公共的
+
+
+
+4	统计文件目录大小
+
+[root@localhost ~]# du -sh /etc/fstab 
+4.0K	/etc/fstab
+
+[root@localhost ~]# du -sh /etc/
+40M	/etc/
+
+[root@localhost ~]# du -ah /etc/
+
+
+5	统计文件行数 
+
+[root@localhost ~]# wc -l /etc/passwd
+39 /etc/passwd
+
+[root@localhost ~]# wc /etc/passwd
+  39   67 1866 /etc/passwd
+
+
+6	创建目录 
+
+# mkdir [option] DIRECTORY
+
+[root@localhost ~]# mkdir /uplooking
+[root@localhost ~]# mkdir test_oracle
+
+option选项：
+
+-p	递归创建 
+
+[root@localhost ~]# mkdir -pv /company/oracle
+mkdir: 已创建目录 "/company"
+mkdir: 已创建目录 "/company/oracle"
+
+
+7	创建空白文件
+
+# touch FILE
+
+[root@localhost ~]# touch /uplooking/1.txt
+
+花括号展开：
+
+[root@localhost ~]# touch /test/{1..100}.jpg
+[root@localhost ~]# touch /test/{1,3,5,7}.txt
+
+[root@localhost ~]# mkdir -p /oracle/web_2017_{1..12}
+
+
+命令展开：
+
+	反引号		`COMMAND`
+	$(COMMAND)
+
+
+[root@localhost ~]# touch /company/web_log_`date +%T`
+[root@localhost ~]# touch /company/web_log_$(date +%T)
+
+
+8	删除文件目录 
+
+# rm [option] FILE
+
+[root@localhost ~]# rm /company/web_log_13\:36\:11 
+rm：是否删除普通空文件 "/company/web_log_13:36:11"？yes
+
+option选项：
+
+-r		用于删除目录
+
+[root@localhost ~]# rm -r /company/
+rm：是否进入目录"/company"? yes
+rm：是否删除普通空文件 "/company/web_log_13:36:58"？yes
+rm：是否删除目录 "/company"？yes
+
+-f		强制删除
+
+[root@localhost ~]# rm -f /test/1.txt 
+[root@localhost ~]# rm -rf /test/
+
+
+9	复制文件目录
+
+# cp [option] SRC_FILE DST_FILE
+
+[root@localhost ~]# cp /bj/1.txt /sh/
+[root@localhost ~]# cp /bj/2.txt /sh/22.txt
+
+option选项：
+
+-r		用于复制目录
+
+[root@localhost ~]# cp -r /bj/ /sh/
+
+
+-a		保留文件的权限属性信息
+
+[root@localhost ~]# touch /bj/4.txt
+[root@localhost ~]# chown test.test /bj/4.txt
+[root@localhost ~]# ls -l /bj/4.txt
+-rw-r--r--. 1 test test 0 10月 15 13:51 /bj/4.txt
+
+[root@localhost ~]# cp -a /bj/4.txt /sh/
+
+
+
+10	移动文件目录 
+
+# mv SRC_FILE DST_FILE
+
+在同目录下移动文件，相当于重命名 
+
+[root@localhost ~]# mv /bj/4.txt /bj/44.txt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
