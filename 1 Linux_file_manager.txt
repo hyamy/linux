@@ -1,7 +1,4 @@
-15天 		Linux系统管理+Linux SHELL脚本编写 
 
-
-用户名： root 密码：uplooking 
 
 KVM虚拟机：
 
